@@ -24,11 +24,14 @@ SHEETS_CONFIG = {
         "tx_id",
         "user_id",
         "date",
-        "asset",
+        "asset",           # Normalized symbol for price lookups (e.g., XAUUSD, BTC, AAPL)
+        "asset_raw",       # Original name from screenshot (e.g., MTS-GOLD, BTCUSDT)
+        "asset_type",      # GOLD, STOCK, or CRYPTO
         "side",
         "amount",
         "price",
-        "total_thb",
+        "currency",        # Original currency (USD, THB, USDT)
+        "total_thb",       # Total converted to THB
         "source_app",
         "created_at",
     ],

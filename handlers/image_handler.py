@@ -47,6 +47,15 @@ class ImageHandler:
             )
             return
 
+        # Log asset normalization
+        asset_raw = parsed.get("asset_raw", parsed.get("asset", ""))
+        asset_normalized = parsed.get("asset_normalized", asset_raw)
+        asset_type = parsed.get("asset_type", "UNKNOWN")
+        print(f"📊 Asset: {asset_raw} → {asset_normalized} ({asset_type})")
+        
+        # Use normalized asset for storage (for price lookups)
+        parsed["asset"] = asset_normalized
+
         # 3. Convert currency to THB if needed
         currency = parsed.get("currency", "THB").upper()
         total_original = float(parsed.get("total", 0) or 0)

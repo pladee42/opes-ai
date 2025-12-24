@@ -30,14 +30,23 @@ cp .env.example .env
 
 ### 3. Configure Google Sheets
 
-Create a Google Sheet with these tabs:
+1. Create an empty Google Sheet
+2. Share it with your service account email (Editor access)
+3. Copy the Sheet ID from the URL and add to `.env`
+4. Run the setup script:
 
-| Sheet Name | Columns |
-|------------|---------|
-| **Users** | user_id, display_name, monthly_budget, target_allocation, risk_profile, created_at |
-| **Transactions** | tx_id, user_id, date, asset, side, amount, price, total_thb, source_app, created_at |
-| **Asset_Reference** | asset_symbol, asset_name, current_price_thb, last_updated |
-| **Watchlist_Alerts** | asset_symbol, last_checked, risk_status, alert_sent |
+```bash
+python3 scripts/setup_sheets.py
+```
+
+This creates all required tabs with proper headers:
+
+| Sheet Name | Key Columns |
+|------------|-------------|
+| **Users** | user_id, display_name, monthly_budget, target_allocation |
+| **Transactions** | asset (normalized), asset_raw (original), asset_type, currency, total_thb |
+| **Asset_Reference** | asset_symbol, current_price_thb |
+| **Watchlist_Alerts** | asset_symbol, risk_status |
 
 ### 4. Configure LINE Webhook
 

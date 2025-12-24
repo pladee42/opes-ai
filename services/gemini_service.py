@@ -9,39 +9,7 @@ from google import genai
 from google.genai import types
 
 from config import Config
-
-
-# Prompt for parsing transaction screenshots
-PARSE_TRANSACTION_PROMPT = """You are a financial transaction parser. Analyze this screenshot from a trading app and extract the transaction details.
-
-The screenshot is from either:
-1. **Dime!** - A Thai app for US stocks and gold trading (can show prices in USD or THB)
-2. **Binance** - A crypto exchange (usually in USDT)
-
-Extract the following information and return ONLY a valid JSON object (no markdown, no explanation):
-
-{
-    "source_app": "Dime" or "Binance",
-    "asset": "The asset symbol (e.g., XAUUSD for gold, AAPL for Apple stock, BTC for Bitcoin)",
-    "side": "BUY" or "SELL",
-    "amount": <number - the quantity purchased/sold>,
-    "price": <number - the price per unit>,
-    "currency": "USD" or "THB" or "USDT" (the currency shown in the screenshot),
-    "total": <number - total transaction value in the original currency>,
-    "date": "YYYY-MM-DD format if visible, otherwise null",
-    "confidence": "high", "medium", or "low"
-}
-
-Rules:
-- For Dime! gold trades, the asset is usually "XAUUSD" or "Gold"
-- For Dime! stock trades, extract the stock ticker symbol
-- For Binance, extract the crypto symbol (BTC, ETH, etc.)
-- IMPORTANT: Identify the currency from symbols like $, ฿, USD, THB, USDT
-- If price shows "$" or "USD", set currency to "USD"
-- If price shows "฿" or "THB" or "บาท", set currency to "THB"
-- If you cannot determine a field with certainty, use null
-- Always return valid JSON only, no other text
-"""
+from prompts.transaction_parser import PARSE_TRANSACTION_PROMPT
 
 
 class GeminiService:
@@ -100,7 +68,7 @@ class GeminiService:
                 print("Gemini returned empty response")
                 print(f"🔍 Full response dump: {vars(response) if hasattr(response, '__dict__') else response}")
                 return None
-            response_text = response.text.strip()
+            response_text = response_text.strip()
 
             # Try to extract JSON if wrapped in markdown code blocks
             json_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", response_text)
@@ -109,10 +77,12 @@ class GeminiService:
 
             # Parse JSON
             parsed = json.loads(response_text)
+            print(f"✅ Parsed JSON: {parsed}")
 
-            # Validate required fields
-            required_fields = ["source_app", "asset", "side", "amount"]
+            # Validate required fields (using asset_normalized from new prompt)
+            required_fields = ["source_app", "asset_normalized", "side", "amount"]
             if not all(parsed.get(f) for f in required_fields):
+                print(f"❌ Missing required fields. Got: {list(parsed.keys())}")
                 return None
 
             return parsed

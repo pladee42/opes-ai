@@ -46,7 +46,7 @@ class FlexMessages:
                             },
                             {
                                 "type": "text",
-                                "text": tx_data.get("asset", ""),
+                                "text": tx_data.get("asset_raw", tx_data.get("asset", "")),
                                 "weight": "bold",
                                 "size": "xl",
                                 "align": "end",
