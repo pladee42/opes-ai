@@ -42,9 +42,14 @@ class GeminiService:
     """Service for Gemini AI operations."""
 
     def __init__(self):
-        """Initialize the Gemini service."""
+        """Initialize the Gemini service with dual models."""
         genai.configure(api_key=Config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel(Config.GEMINI_MODEL)
+
+        # OCR Model - optimized for vision/screenshot parsing
+        self.ocr_model = genai.GenerativeModel(Config.GEMINI_OCR_MODEL)
+
+        # Research Model - for deep financial analysis and research
+        self.research_model = genai.GenerativeModel(Config.GEMINI_RESEARCH_MODEL)
 
     def parse_transaction_image(self, image_bytes: bytes) -> Optional[dict]:
         """Parse a transaction screenshot using Gemini Vision.
@@ -62,8 +67,8 @@ class GeminiService:
                 "data": image_bytes,
             }
 
-            # Send to Gemini Vision
-            response = self.model.generate_content(
+            # Send to Gemini Vision (using OCR model)
+            response = self.ocr_model.generate_content(
                 [PARSE_TRANSACTION_PROMPT, image_part],
                 generation_config=genai.GenerationConfig(
                     temperature=0.1,  # Low temperature for consistent parsing
@@ -96,21 +101,38 @@ class GeminiService:
             print(f"Gemini API error: {e}")
             return None
 
-    def generate_response(self, prompt: str) -> str:
+    def generate_response(self, prompt: str, use_research_model: bool = False) -> str:
         """Generate a text response using Gemini.
 
         Args:
             prompt: The text prompt
+            use_research_model: If True, use the research model (Gemini 2.5)
+                              If False, use the OCR model (faster)
 
         Returns:
             Generated response text
         """
         try:
-            response = self.model.generate_content(prompt)
+            model = self.research_model if use_research_model else self.ocr_model
+            response = model.generate_content(prompt)
             return response.text
         except Exception as e:
             print(f"Gemini API error: {e}")
             return "ขออภัย ไม่สามารถประมวลผลได้ในขณะนี้"
+
+    def deep_research(self, prompt: str) -> str:
+        """Perform deep research using Gemini 2.5 Pro.
+
+        Use this for complex financial analysis, news research,
+        and tasks requiring advanced reasoning.
+
+        Args:
+            prompt: The research prompt
+
+        Returns:
+            Research response text
+        """
+        return self.generate_response(prompt, use_research_model=True)
 
 
 # Singleton instance

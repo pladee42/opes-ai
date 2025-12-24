@@ -21,7 +21,10 @@ class Config:
 
     # Gemini API
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+
+    # Gemini Models
+    GEMINI_OCR_MODEL = os.getenv("GEMINI_OCR_MODEL", "gemini-1.5-pro")
+    GEMINI_RESEARCH_MODEL = os.getenv("GEMINI_RESEARCH_MODEL", "gemini-2.5-pro")
 
     @classmethod
     def validate(cls) -> list[str]:
