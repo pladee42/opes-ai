@@ -264,8 +264,10 @@
             }
         }
         
+        let itemCounter = 0;  // Counter for unique IDs
+        
         function addItem() {
-            const id = Date.now();
+            const id = ++itemCounter;  // Guaranteed unique
             allocations.push({ id, ticker: '', weight: 0 });
             renderList();
         }
