@@ -8,11 +8,13 @@ from utils.flex_messages import FlexMessages
 class MessageHandler:
     """Handler for processing text messages."""
 
-    # Command keywords
+    # Command keywords (includes Rich Menu # commands)
     COMMANDS = {
-        "help": ["help", "ช่วยเหลือ", "วิธีใช้", "?"],
-        "status": ["status", "สถานะ", "portfolio", "พอร์ต"],
-        "plan": ["plan", "แผน", "dca", "ซื้อ"],
+        "help": ["help", "ช่วยเหลือ", "วิธีใช้", "?", "#help"],
+        "status": ["status", "สถานะ", "portfolio", "พอร์ต", "#status"],
+        "plan": ["plan", "แผน", "dca", "ซื้อ", "#dca"],
+        "record": ["#record"],
+        "report": ["#report", "report"],
     }
 
     def handle(self, event) -> None:
@@ -31,7 +33,11 @@ class MessageHandler:
         elif self._is_command(text, "status"):
             self._reply_status(reply_token, user_id)
         elif self._is_command(text, "plan"):
-            self._reply_plan_coming_soon(reply_token)
+            self._reply_dca(reply_token, user_id)
+        elif self._is_command(text, "record"):
+            self._reply_record_tip(reply_token)
+        elif self._is_command(text, "report"):
+            self._reply_report_coming_soon(reply_token)
         else:
             # Default: greet and explain
             self._reply_default(reply_token, user_id)
@@ -78,11 +84,50 @@ class MessageHandler:
         holdings_text += "\n💡 ฟีเจอร์ดูมูลค่าปัจจุบันจะมาเร็วๆนี้!"
         line_service.reply_text(reply_token, holdings_text)
 
-    def _reply_plan_coming_soon(self, reply_token: str) -> None:
-        """Reply that DCA plan feature is coming soon."""
+    def _reply_dca(self, reply_token: str, user_id: str) -> None:
+        """Reply with DCA plan calculation."""
+        user = sheets_service.get_user(user_id)
+        holdings = sheets_service.get_holdings(user_id)
+
+        if not user or not user.get("target_allocation"):
+            line_service.reply_text(
+                reply_token,
+                "📋 ยังไม่ได้ตั้งค่าแผนลงทุน\n\nกรุณาตั้งค่าแผนก่อนที่เมนู ⚙️ ตั้งค่า",
+            )
+            return
+
+        budget = user.get("monthly_budget", 10000)
+        allocation = user.get("target_allocation", {})
+
+        if not allocation:
+            line_service.reply_text(
+                reply_token,
+                "📋 ยังไม่ได้ตั้งค่าสัดส่วนการลงทุน\n\nกรุณาตั้งค่าที่เมนู ⚙️ ตั้งค่า",
+            )
+            return
+
+        # Calculate what to buy (simple version - will enhance later)
+        plan_text = f"📋 **แผนซื้อเดือนนี้**\nงบ: ฿{budget:,}\n\n"
+
+        for ticker, weight in allocation.items():
+            amount = budget * (weight / 100)
+            plan_text += f"• {ticker}: ฿{amount:,.0f} ({weight}%)\n"
+
+        plan_text += "\n💡 ซื้อตามแผนให้ครบทุกตัว!"
+        line_service.reply_text(reply_token, plan_text)
+
+    def _reply_record_tip(self, reply_token: str) -> None:
+        """Reply with tip to send image."""
         line_service.reply_text(
             reply_token,
-            "📋 **Smart DCA Calculator**\n\nฟีเจอร์นี้กำลังพัฒนาอยู่\nจะช่วยคำนวณว่าควรซื้ออะไรเท่าไหร่ในแต่ละเดือน\n\n⏳ เร็วๆนี้!",
+            "📸 **บันทึกรายการ**\n\nส่งรูปหน้าจอการซื้อขายจาก:\n• Dime! (หุ้น US, ทอง)\n• Binance (คริปโต)\n\nมาได้เลย!",
+        )
+
+    def _reply_report_coming_soon(self, reply_token: str) -> None:
+        """Reply that report feature is coming soon."""
+        line_service.reply_text(
+            reply_token,
+            "📈 **Performance Report**\n\nฟีเจอร์รายงานกำไรขาดทุนกำลังพัฒนาอยู่\n\n⏳ เร็วๆนี้!",
         )
 
     def _reply_default(self, reply_token: str, user_id: str) -> None:

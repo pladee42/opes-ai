@@ -67,12 +67,13 @@ class SheetsService:
         monthly_budget: int = 10000,
         target_allocation: Optional[dict] = None,
         risk_profile: str = "moderate",
+        onboarding_status: str = "NEW",
     ) -> dict:
         """Create a new user in the Users sheet."""
         sheet = self.spreadsheet.worksheet("Users")
 
         if target_allocation is None:
-            target_allocation = {"gold": 50, "stocks": 30, "crypto": 20}
+            target_allocation = {}  # Empty until user sets custom allocation
 
         user_data = {
             "user_id": user_id,
@@ -80,6 +81,7 @@ class SheetsService:
             "monthly_budget": monthly_budget,
             "target_allocation": json.dumps(target_allocation),
             "risk_profile": risk_profile,
+            "onboarding_status": onboarding_status,
             "created_at": datetime.now().isoformat(),
         }
 

@@ -18,6 +18,7 @@ SHEETS_CONFIG = {
         "monthly_budget",
         "target_allocation",
         "risk_profile",
+        "onboarding_status",
         "created_at",
     ],
     "Transactions": [

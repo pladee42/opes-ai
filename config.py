@@ -26,6 +26,9 @@ class Config:
     GEMINI_OCR_MODEL = os.getenv("GEMINI_OCR_MODEL", "gemini-3-flash-preview")
     GEMINI_RESEARCH_MODEL = os.getenv("GEMINI_RESEARCH_MODEL", "gemini-3-pro-preview")
 
+    # LIFF
+    LIFF_URL = os.getenv("LIFF_URL", "https://liff.line.me/YOUR_LIFF_ID")
+
     @classmethod
     def validate(cls) -> list[str]:
         """Validate required configuration. Returns list of missing keys."""
