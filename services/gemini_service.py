@@ -1,10 +1,12 @@
 """Gemini AI service for vision and text processing."""
 
+import base64
 import json
 import re
 from typing import Optional
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from config import Config
 
@@ -43,13 +45,9 @@ class GeminiService:
 
     def __init__(self):
         """Initialize the Gemini service with dual models."""
-        genai.configure(api_key=Config.GEMINI_API_KEY)
-
-        # OCR Model - optimized for vision/screenshot parsing
-        self.ocr_model = genai.GenerativeModel(Config.GEMINI_OCR_MODEL)
-
-        # Research Model - for deep financial analysis and research
-        self.research_model = genai.GenerativeModel(Config.GEMINI_RESEARCH_MODEL)
+        self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
+        self.ocr_model = Config.GEMINI_OCR_MODEL
+        self.research_model = Config.GEMINI_RESEARCH_MODEL
 
     def parse_transaction_image(self, image_bytes: bytes) -> Optional[dict]:
         """Parse a transaction screenshot using Gemini Vision.
@@ -62,15 +60,16 @@ class GeminiService:
         """
         try:
             # Create image part for Gemini
-            image_part = {
-                "mime_type": "image/jpeg",
-                "data": image_bytes,
-            }
+            image_part = types.Part.from_bytes(
+                data=image_bytes,
+                mime_type="image/jpeg",
+            )
 
             # Send to Gemini Vision (using OCR model)
-            response = self.ocr_model.generate_content(
-                [PARSE_TRANSACTION_PROMPT, image_part],
-                generation_config=genai.GenerationConfig(
+            response = self.client.models.generate_content(
+                model=self.ocr_model,
+                contents=[PARSE_TRANSACTION_PROMPT, image_part],
+                config=types.GenerateContentConfig(
                     temperature=0.1,  # Low temperature for consistent parsing
                     max_output_tokens=500,
                 ),
@@ -114,7 +113,10 @@ class GeminiService:
         """
         try:
             model = self.research_model if use_research_model else self.ocr_model
-            response = model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=model,
+                contents=prompt,
+            )
             return response.text
         except Exception as e:
             print(f"Gemini API error: {e}")
