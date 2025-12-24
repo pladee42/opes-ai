@@ -15,8 +15,8 @@ from config import Config
 PARSE_TRANSACTION_PROMPT = """You are a financial transaction parser. Analyze this screenshot from a trading app and extract the transaction details.
 
 The screenshot is from either:
-1. **Dime!** - A Thai app for US stocks and gold trading
-2. **Binance** - A crypto exchange
+1. **Dime!** - A Thai app for US stocks and gold trading (can show prices in USD or THB)
+2. **Binance** - A crypto exchange (usually in USDT)
 
 Extract the following information and return ONLY a valid JSON object (no markdown, no explanation):
 
@@ -26,7 +26,8 @@ Extract the following information and return ONLY a valid JSON object (no markdo
     "side": "BUY" or "SELL",
     "amount": <number - the quantity purchased/sold>,
     "price": <number - the price per unit>,
-    "total_thb": <number - total value in THB if shown, otherwise calculate>,
+    "currency": "USD" or "THB" or "USDT" (the currency shown in the screenshot),
+    "total": <number - total transaction value in the original currency>,
     "date": "YYYY-MM-DD format if visible, otherwise null",
     "confidence": "high", "medium", or "low"
 }
@@ -35,6 +36,9 @@ Rules:
 - For Dime! gold trades, the asset is usually "XAUUSD" or "Gold"
 - For Dime! stock trades, extract the stock ticker symbol
 - For Binance, extract the crypto symbol (BTC, ETH, etc.)
+- IMPORTANT: Identify the currency from symbols like $, ฿, USD, THB, USDT
+- If price shows "$" or "USD", set currency to "USD"
+- If price shows "฿" or "THB" or "บาท", set currency to "THB"
 - If you cannot determine a field with certainty, use null
 - Always return valid JSON only, no other text
 """
@@ -65,17 +69,37 @@ class GeminiService:
                 mime_type="image/jpeg",
             )
 
+            print(f"🔧 Using model: {self.ocr_model}")
+
             # Send to Gemini Vision (using OCR model)
+            # Note: Gemini 3 uses "thinking" tokens, so we need higher max_output_tokens
             response = self.client.models.generate_content(
                 model=self.ocr_model,
                 contents=[PARSE_TRANSACTION_PROMPT, image_part],
                 config=types.GenerateContentConfig(
                     temperature=0.1,  # Low temperature for consistent parsing
-                    max_output_tokens=500,
+                    max_output_tokens=8000,  # High enough for Gemini 3 thinking + output
                 ),
             )
 
-            # Extract JSON from response
+            # Debug: print full response
+            print(f"🔍 Response object: {response}")
+            print(f"🔍 Response candidates: {response.candidates if hasattr(response, 'candidates') else 'N/A'}")
+
+            # Extract JSON from response - try different methods
+            response_text = None
+            if hasattr(response, 'text') and response.text:
+                response_text = response.text
+            elif hasattr(response, 'candidates') and response.candidates:
+                # Try to get text from candidates
+                candidate = response.candidates[0]
+                if hasattr(candidate, 'content') and candidate.content.parts:
+                    response_text = candidate.content.parts[0].text
+
+            if not response_text:
+                print("Gemini returned empty response")
+                print(f"🔍 Full response dump: {vars(response) if hasattr(response, '__dict__') else response}")
+                return None
             response_text = response.text.strip()
 
             # Try to extract JSON if wrapped in markdown code blocks

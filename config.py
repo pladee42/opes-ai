@@ -3,7 +3,7 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 class Config:
@@ -23,8 +23,8 @@ class Config:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
     # Gemini Models
-    GEMINI_OCR_MODEL = os.getenv("GEMINI_OCR_MODEL", "gemini-1.5-pro")
-    GEMINI_RESEARCH_MODEL = os.getenv("GEMINI_RESEARCH_MODEL", "gemini-2.5-pro")
+    GEMINI_OCR_MODEL = os.getenv("GEMINI_OCR_MODEL", "gemini-3-flash-preview")
+    GEMINI_RESEARCH_MODEL = os.getenv("GEMINI_RESEARCH_MODEL", "gemini-3-pro-preview")
 
     @classmethod
     def validate(cls) -> list[str]:
