@@ -292,18 +292,18 @@
                            placeholder="TICKER" 
                            value="${item.ticker}"
                            maxlength="10"
-                           onchange="updateItem(${item.id}, 'ticker', this.value)"
-                           oninput="this.value = this.value.toUpperCase()">
+                           oninput="updateItem(${item.id}, 'ticker', this.value)">
                     <input type="number" 
                            placeholder="0" 
                            value="${item.weight || ''}"
                            min="0" 
                            max="100"
-                           onchange="updateItem(${item.id}, 'weight', this.value)">
+                           oninput="updateItem(${item.id}, 'weight', this.value)">
                     <span class="percent">%</span>
                     <button class="remove-btn" onclick="removeItem(${item.id})">×</button>
                 </div>
             `).join('');
+            updateTotal();
         }
         
         function updateTotal() {
