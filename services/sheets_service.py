@@ -27,9 +27,18 @@ class SheetsService:
     def client(self) -> gspread.Client:
         """Lazy-load the gspread client."""
         if self._client is None:
-            creds = Credentials.from_service_account_file(
-                Config.GOOGLE_SERVICE_ACCOUNT_FILE, scopes=self.SCOPES
-            )
+            import os
+            
+            # Try service account file first (local dev), then ADC (Cloud Run)
+            if os.path.exists(Config.GOOGLE_SERVICE_ACCOUNT_FILE):
+                creds = Credentials.from_service_account_file(
+                    Config.GOOGLE_SERVICE_ACCOUNT_FILE, scopes=self.SCOPES
+                )
+            else:
+                # Use Application Default Credentials (for Cloud Run)
+                import google.auth
+                creds, _ = google.auth.default(scopes=self.SCOPES)
+            
             self._client = gspread.authorize(creds)
         return self._client
 

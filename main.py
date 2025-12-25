@@ -27,6 +27,10 @@ from handlers.postback_handler import postback_handler
 # Initialize Flask app
 app = Flask(__name__)
 
+# Enable CORS for API endpoints
+from flask_cors import CORS
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
 
 @app.route("/", methods=["GET"])
 def health_check():
@@ -34,30 +38,73 @@ def health_check():
     return {"status": "ok", "service": "Family Wealth AI"}
 
 
-@app.route("/api/allocation", methods=["POST"])
+@app.route("/api/allocation", methods=["POST", "OPTIONS"])
 def save_allocation():
     """API endpoint for LIFF to save user allocation."""
+    # Handle preflight request
+    if request.method == "OPTIONS":
+        response = app.make_default_options_response()
+        return response
+    
     from services.sheets_service import sheets_service
+    from utils.normalizer import normalize_allocation
     
     data = request.get_json()
     user_id = data.get("user_id")
     allocation = data.get("allocation", {})
+    monthly_budget = data.get("monthly_budget")
     
     if not user_id or not allocation:
         return {"error": "Missing user_id or allocation"}, 400
     
-    # Update user's allocation
-    success = sheets_service.update_user(user_id, {
-        "target_allocation": allocation,
+    # Normalize asset names (e.g., "BTCUSDT" -> "BTC", "Gold" -> "GOLD")
+    normalized_allocation = normalize_allocation(allocation)
+    
+    # Build update data
+    update_data = {
+        "target_allocation": normalized_allocation,
         "onboarding_status": "ACTIVE",
-    })
+    }
+    
+    # Include budget if provided
+    if monthly_budget:
+        update_data["monthly_budget"] = int(monthly_budget)
+    
+    # Update user's allocation
+    success = sheets_service.update_user(user_id, update_data)
     
     if success:
-        return {"status": "ok", "message": "Allocation saved"}
+        return {"status": "ok", "message": "Allocation saved", "normalized": normalized_allocation}
     else:
         return {"error": "User not found"}, 404
 
 
+@app.route("/api/user/<user_id>", methods=["GET", "OPTIONS"])
+def get_user_settings(user_id):
+    """API endpoint for LIFF to get user settings."""
+    if request.method == "OPTIONS":
+        response = app.make_default_options_response()
+        return response
+    
+    from services.sheets_service import sheets_service
+    
+    user = sheets_service.get_user(user_id)
+    
+    if user:
+        return {
+            "status": "ok",
+            "monthly_budget": user.get("monthly_budget", 10000),
+            "target_allocation": user.get("target_allocation", {}),
+            "display_name": user.get("display_name", ""),
+        }
+    else:
+        # New user - return defaults
+        return {
+            "status": "ok",
+            "monthly_budget": None,
+            "target_allocation": {},
+            "display_name": "",
+        }
 
 @app.route("/webhook", methods=["POST"])
 def webhook():

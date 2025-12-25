@@ -33,19 +33,19 @@ class PostbackHandler:
             print(f"⚠️ Unknown postback action: {action}")
 
     def _start_onboarding(self, user_id: str, reply_token: str) -> None:
-        """Start the onboarding flow."""
+        """Start the onboarding flow - go directly to LIFF."""
         # Update user status
-        sheets_service.update_user(user_id, {"onboarding_status": "BUDGET"})
+        sheets_service.update_user(user_id, {"onboarding_status": "SETUP"})
         
-        # Ask for budget
+        # Send LIFF link for setup (budget + allocation in one page)
         line_service.reply_flex(
             reply_token,
-            "งบลงทุนต่อเดือน",
-            FlexMessages.budget_question(),
+            "ตั้งค่าแผนลงทุน",
+            FlexMessages.setup_plan_prompt(),
         )
 
     def _handle_budget_selection(self, user_id: str, reply_token: str, data: str) -> None:
-        """Handle budget selection."""
+        """Handle budget selection (legacy - kept for compatibility)."""
         # Parse budget from data: "set_budget=10000"
         try:
             budget = int(data.split("=")[1])
@@ -62,7 +62,7 @@ class PostbackHandler:
         line_service.reply_flex(
             reply_token,
             "ตั้งค่าแผนการลงทุน",
-            FlexMessages.allocation_setup_prompt(budget),
+            FlexMessages.setup_plan_prompt(),
         )
 
     def _skip_onboarding(self, user_id: str, reply_token: str) -> None:

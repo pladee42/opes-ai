@@ -1,0 +1,59 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: opes-ai-482213
+  SERVICE_NAME: opes-ai
+  REGION: asia-southeast1
+  BUCKET_NAME: opes-ai-liff
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy $SERVICE_NAME \
+            --source . \
+            --region $REGION \
+            --allow-unauthenticated \
+            --memory 512Mi \
+            --timeout 120
+
+      - name: Get Cloud Run URL
+        id: cloudrun
+        run: |
+          URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --format='value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Update and upload LIFF
+        run: |
+          sed -i "s|window.location.origin + '/api/allocation'|'${{ steps.cloudrun.outputs.url }}/api/allocation'|" liff/allocation.html
+          gsutil -h "Content-Type:text/html" cp liff/allocation.html gs://$BUCKET_NAME/allocation.html
+
+      - name: Print URLs
+        run: |
+          echo "🚀 Deployment Complete!"
+          echo "Webhook URL: ${{ steps.cloudrun.outputs.url }}/webhook"
+          echo "LIFF URL: https://storage.googleapis.com/$BUCKET_NAME/allocation.html"

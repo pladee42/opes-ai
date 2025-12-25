@@ -197,17 +197,67 @@
             margin-bottom: 16px;
             font-size: 0.875rem;
         }
+        
+        .budget-section {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .budget-label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--gray-500);
+            margin-bottom: 8px;
+        }
+        
+        .budget-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .budget-input-wrapper .currency {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .budget-input-wrapper input {
+            flex: 1;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .budget-input-wrapper input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📊 ตั้งค่าแผนลงทุน</h1>
-        <p>ใส่ Ticker และสัดส่วน % ที่ต้องการ</p>
+        <h1>⚙️ ตั้งค่าแผนลงทุน</h1>
+        <p>ตั้งค่างบและสัดส่วนการลงทุน</p>
     </div>
     
     <div class="container">
         <div id="loading" class="loading">กำลังโหลด...</div>
         <div id="content" style="display: none;">
+            <!-- Budget Section -->
+            <div class="budget-section">
+                <label class="budget-label">💰 งบลงทุนต่อเดือน</label>
+                <div class="budget-input-wrapper">
+                    <span class="currency">฿</span>
+                    <input type="number" id="budgetInput" placeholder="10000" min="1000" step="1000" oninput="updateBudget()">
+                </div>
+            </div>
+            
             <div class="total-bar">
                 <span class="label">รวมทั้งหมด</span>
                 <span class="value" id="totalPercent">0%</span>
@@ -231,11 +281,17 @@
         // LIFF ID - Replace with your actual LIFF ID
         const LIFF_ID = '2008769324-8sktNl4c';
         
-        // API endpoint for saving allocation
-        const API_ENDPOINT = window.location.origin + '/api/allocation';
+        // API endpoint for saving allocation (Cloud Run)
+        const API_ENDPOINT = 'https://opes-ai-9850054870.asia-southeast1.run.app/api/allocation';
         
         let userId = null;
         let allocations = [];
+        let monthlyBudget = 10000;
+        
+        function updateBudget() {
+            const input = document.getElementById('budgetInput');
+            monthlyBudget = parseInt(input.value) || 10000;
+        }
         
         // Initialize LIFF
         async function initLiff() {
@@ -250,17 +306,50 @@
                 const profile = await liff.getProfile();
                 userId = profile.userId;
                 
+                // Load existing user settings
+                await loadUserSettings();
+                
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
-                
-                // Add initial empty items
-                addItem();
-                addItem();
-                addItem();
                 
             } catch (error) {
                 console.error('LIFF init error:', error);
                 showError('ไม่สามารถเชื่อมต่อ LINE ได้');
+            }
+        }
+        
+        async function loadUserSettings() {
+            try {
+                const response = await fetch(API_ENDPOINT.replace('/api/allocation', `/api/user/${userId}`));
+                const data = await response.json();
+                
+                // Set budget
+                if (data.monthly_budget) {
+                    document.getElementById('budgetInput').value = data.monthly_budget;
+                    monthlyBudget = data.monthly_budget;
+                }
+                
+                // Set allocations
+                if (data.target_allocation && Object.keys(data.target_allocation).length > 0) {
+                    // Load existing allocations
+                    for (const [ticker, weight] of Object.entries(data.target_allocation)) {
+                        const id = ++itemCounter;
+                        allocations.push({ id, ticker, weight });
+                    }
+                    renderList();
+                } else {
+                    // New user - add empty items
+                    addItem();
+                    addItem();
+                    addItem();
+                }
+                
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+                // Add empty items on error
+                addItem();
+                addItem();
+                addItem();
             }
         }
         
@@ -353,6 +442,7 @@
                     body: JSON.stringify({
                         user_id: userId,
                         allocation: allocationMap,
+                        monthly_budget: monthlyBudget,
                     }),
                 });
                 

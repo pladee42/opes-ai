@@ -190,7 +190,7 @@ class FlexMessages:
                 "contents": [
                     {
                         "type": "text",
-                        "text": "Family Wealth AI พร้อมช่วยจัดการการลงทุนของคุณแล้ว!",
+                        "text": "Opes AI พร้อมช่วยจัดการการลงทุนของคุณแล้ว!",
                         "size": "sm",
                         "color": "#666666",
                         "wrap": True,
@@ -250,7 +250,7 @@ class FlexMessages:
                 "contents": [
                     {
                         "type": "text",
-                        "text": "Family Wealth AI พร้อมช่วยจัดการพอร์ตลงทุนของคุณ",
+                        "text": "Opes AI พร้อมช่วยจัดการพอร์ตลงทุนของคุณ",
                         "size": "sm",
                         "color": "#666666",
                         "wrap": True,
@@ -340,23 +340,13 @@ class FlexMessages:
             },
         }
 
+
+
     @staticmethod
-    def budget_question() -> dict:
-        """Create budget selection message."""
-        budgets = [5000, 10000, 20000, 50000]
-        buttons = [
-            {
-                "type": "button",
-                "style": "secondary",
-                "action": {
-                    "type": "postback",
-                    "label": f"฿{b:,}",
-                    "data": f"set_budget={b}",
-                },
-                "height": "sm",
-            }
-            for b in budgets
-        ]
+    def setup_plan_prompt() -> dict:
+        """Create a prompt to set up investment plan via LIFF."""
+        from config import Config
+        liff_url = Config.LIFF_URL
         
         return {
             "type": "bubble",
@@ -367,48 +357,7 @@ class FlexMessages:
                 "contents": [
                     {
                         "type": "text",
-                        "text": "💰 งบลงทุนต่อเดือน",
-                        "weight": "bold",
-                        "size": "lg",
-                        "color": "#333333",
-                    }
-                ],
-                "paddingAll": "15px",
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "เลือกงบที่ต้องการลงทุนต่อเดือน",
-                        "size": "sm",
-                        "color": "#888888",
-                    },
-                    {"type": "separator", "margin": "md"},
-                    *buttons,
-                ],
-                "paddingAll": "15px",
-            },
-        }
-
-    @staticmethod
-    def allocation_setup_prompt(budget: int, liff_url: str = None) -> dict:
-        """Create allocation setup prompt with LIFF link."""
-        from config import Config
-        if liff_url is None:
-            liff_url = Config.LIFF_URL
-        return {
-            "type": "bubble",
-            "size": "kilo",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "📊 ตั้งค่าแผนลงทุน",
+                        "text": "⚙️ ตั้งค่าแผนลงทุน",
                         "weight": "bold",
                         "size": "lg",
                         "color": "#333333",
@@ -422,17 +371,17 @@ class FlexMessages:
                 "contents": [
                     {
                         "type": "text",
-                        "text": f"งบต่อเดือน: ฿{budget:,}",
-                        "size": "md",
-                        "color": "#6366F1",
-                        "weight": "bold",
-                    },
-                    {
-                        "type": "text",
-                        "text": "ใส่ Ticker และน้ำหนัก % ของแต่ละสินทรัพย์ที่ต้องการลงทุน",
-                        "size": "sm",
-                        "color": "#666666",
+                        "text": "กำหนดงบและสัดส่วนการลงทุนของคุณ",
                         "wrap": True,
+                        "color": "#666666",
+                        "size": "sm",
+                    },
+                    {
+                        "type": "text",
+                        "text": "• ตั้งงบลงทุนต่อเดือน\n• เลือกสินทรัพย์และสัดส่วน\n• ระบบจะคำนวณแผน DCA ให้",
+                        "wrap": True,
+                        "color": "#888888",
+                        "size": "xs",
                         "margin": "md",
                     },
                 ],
@@ -453,12 +402,14 @@ class FlexMessages:
                         "color": "#6366F1",
                     },
                     {
-                        "type": "text",
-                        "text": "หรือพิมพ์ #plan ทีหลังได้",
-                        "size": "xs",
-                        "color": "#888888",
-                        "align": "center",
-                        "margin": "md",
+                        "type": "button",
+                        "style": "link",
+                        "action": {
+                            "type": "postback",
+                            "label": "ข้ามไปก่อน",
+                            "data": "skip_onboarding",
+                        },
+                        "margin": "sm",
                     },
                 ],
                 "paddingAll": "15px",

@@ -15,6 +15,7 @@ class MessageHandler:
         "plan": ["plan", "แผน", "dca", "ซื้อ", "#dca"],
         "record": ["#record"],
         "report": ["#report", "report"],
+        "settings": ["#settings", "settings", "ตั้งค่า", "budget", "งบ"],
     }
 
     def handle(self, event) -> None:
@@ -38,6 +39,8 @@ class MessageHandler:
             self._reply_record_tip(reply_token)
         elif self._is_command(text, "report"):
             self._reply_report_coming_soon(reply_token)
+        elif self._is_command(text, "settings"):
+            self._reply_settings(reply_token)
         else:
             # Default: greet and explain
             self._reply_default(reply_token, user_id)
@@ -85,14 +88,15 @@ class MessageHandler:
         line_service.reply_text(reply_token, holdings_text)
 
     def _reply_dca(self, reply_token: str, user_id: str) -> None:
-        """Reply with DCA plan calculation."""
+        """Reply with Smart DCA plan using rebalance-by-buying logic."""
+        from utils.dca_calculator import calculate_dca_rebalance, format_dca_message
+        
         user = sheets_service.get_user(user_id)
-        holdings = sheets_service.get_holdings(user_id)
-
+        
         if not user or not user.get("target_allocation"):
             line_service.reply_text(
                 reply_token,
-                "📋 ยังไม่ได้ตั้งค่าแผนลงทุน\n\nกรุณาตั้งค่าแผนก่อนที่เมนู ⚙️ ตั้งค่า",
+                "📋 ยังไม่ได้ตั้งค่าแผนลงทุน\n\nพิมพ์ #settings เพื่อตั้งค่างบและแผน",
             )
             return
 
@@ -102,19 +106,31 @@ class MessageHandler:
         if not allocation:
             line_service.reply_text(
                 reply_token,
-                "📋 ยังไม่ได้ตั้งค่าสัดส่วนการลงทุน\n\nกรุณาตั้งค่าที่เมนู ⚙️ ตั้งค่า",
+                "📋 ยังไม่ได้ตั้งค่าสัดส่วนการลงทุน\n\nพิมพ์ #settings เพื่อตั้งค่า",
             )
             return
 
-        # Calculate what to buy (simple version - will enhance later)
-        plan_text = f"📋 **แผนซื้อเดือนนี้**\nงบ: ฿{budget:,}\n\n"
-
-        for ticker, weight in allocation.items():
-            amount = budget * (weight / 100)
-            plan_text += f"• {ticker}: ฿{amount:,.0f} ({weight}%)\n"
-
-        plan_text += "\n💡 ซื้อตามแผนให้ครบทุกตัว!"
-        line_service.reply_text(reply_token, plan_text)
+        # Get current holdings value (simplified - using quantity for now)
+        # TODO: Integrate with price_service for real-time values
+        holdings = sheets_service.get_holdings(user_id)
+        
+        # For now, treat holdings as values (will add price lookup later)
+        # This is a placeholder - in production, multiply quantity by current price
+        current_values = {}
+        for asset, qty in holdings.items():
+            # Placeholder: assume 1000 THB per unit for demo
+            current_values[asset] = qty * 1000
+        
+        # Calculate Smart DCA
+        result = calculate_dca_rebalance(
+            monthly_budget=budget,
+            target_allocation=allocation,
+            current_holdings=current_values,
+        )
+        
+        # Format and send
+        message = format_dca_message(result)
+        line_service.reply_text(reply_token, message)
 
     def _reply_record_tip(self, reply_token: str) -> None:
         """Reply with tip to send image."""
@@ -128,6 +144,14 @@ class MessageHandler:
         line_service.reply_text(
             reply_token,
             "📈 **Performance Report**\n\nฟีเจอร์รายงานกำไรขาดทุนกำลังพัฒนาอยู่\n\n⏳ เร็วๆนี้!",
+        )
+
+    def _reply_settings(self, reply_token: str) -> None:
+        """Reply with budget selection."""
+        line_service.reply_flex(
+            reply_token,
+            "ตั้งค่างบลงทุน",
+            FlexMessages.budget_question(),
         )
 
     def _reply_default(self, reply_token: str, user_id: str) -> None:
