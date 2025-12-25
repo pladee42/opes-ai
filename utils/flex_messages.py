@@ -415,3 +415,224 @@ class FlexMessages:
                 "paddingAll": "15px",
             },
         }
+
+    # Asset type colors
+    ASSET_COLORS = {
+        "GOLD": "#10B981",      # Green
+        "STOCK": "#6366F1",     # Purple
+        "CRYPTO": "#F59E0B",    # Orange
+        "CASH": "#6B7280",      # Gray
+    }
+
+    @staticmethod
+    def get_asset_type(ticker: str) -> str:
+        """Determine asset type from ticker."""
+        gold_tickers = {"GOLD", "XAUUSD", "XAU"}
+        crypto_tickers = {"BTC", "ETH", "SOL", "DOGE", "XRP", "ADA", "DOT", "MATIC"}
+        
+        if ticker.upper() in gold_tickers:
+            return "GOLD"
+        elif ticker.upper() in crypto_tickers:
+            return "CRYPTO"
+        else:
+            return "STOCK"
+
+    @classmethod
+    def portfolio_overview(cls, total_value: float, type_ratios: dict) -> dict:
+        """Create portfolio overview Flex Message with asset type ratio bar.
+        
+        Args:
+            total_value: Total portfolio value in THB
+            type_ratios: Dict of {asset_type: percentage}, e.g. {"GOLD": 30, "STOCK": 40, "CRYPTO": 30}
+        """
+        # Build ratio bar segments
+        bar_segments = []
+        for asset_type, pct in type_ratios.items():
+            if pct > 0:
+                bar_segments.append({
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [],
+                    "flex": int(pct),
+                    "backgroundColor": cls.ASSET_COLORS.get(asset_type, "#6B7280"),
+                })
+        
+        # Build legend items
+        legend_items = []
+        type_labels = {"GOLD": "ทอง", "STOCK": "หุ้น", "CRYPTO": "คริปโต", "CASH": "เงินสด"}
+        for asset_type, pct in type_ratios.items():
+            if pct > 0:
+                legend_items.append({
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [],
+                            "width": "10px",
+                            "height": "10px",
+                            "backgroundColor": cls.ASSET_COLORS.get(asset_type, "#6B7280"),
+                            "cornerRadius": "5px",
+                        },
+                        {
+                            "type": "text",
+                            "text": f"{pct:.0f}% {type_labels.get(asset_type, asset_type)}",
+                            "size": "xs",
+                            "color": "#666666",
+                            "margin": "sm",
+                        },
+                    ],
+                    "alignItems": "center",
+                })
+        
+        return {
+            "type": "bubble",
+            "size": "kilo",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "📊 สถานะพอร์ตลงทุน",
+                        "weight": "bold",
+                        "size": "md",
+                        "color": "#FFFFFF",
+                    }
+                ],
+                "backgroundColor": "#1F2937",
+                "paddingAll": "15px",
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "มูลค่ารวม",
+                        "size": "sm",
+                        "color": "#888888",
+                    },
+                    {
+                        "type": "text",
+                        "text": f"฿{total_value:,.2f}",
+                        "size": "xxl",
+                        "weight": "bold",
+                        "color": "#333333",
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": bar_segments if bar_segments else [{"type": "filler"}],
+                        "height": "12px",
+                        "cornerRadius": "6px",
+                        "margin": "lg",
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": legend_items if legend_items else [{"type": "filler"}],
+                        "margin": "md",
+                        "spacing": "lg",
+                    },
+                ],
+                "paddingAll": "15px",
+            },
+        }
+
+    @classmethod
+    def ticker_breakdown(cls, holdings: list) -> dict:
+        """Create ticker breakdown Flex Message with individual progress bars.
+        
+        Args:
+            holdings: List of dicts with {ticker, value, percentage, asset_type}
+        """
+        ticker_items = []
+        
+        for h in holdings:
+            ticker = h["ticker"]
+            value = h["value"]
+            pct = h["percentage"]
+            asset_type = h.get("asset_type", cls.get_asset_type(ticker))
+            color = cls.ASSET_COLORS.get(asset_type, "#6B7280")
+            
+            # Progress bar
+            filled = max(1, int(pct))
+            unfilled = max(1, 100 - filled)
+            
+            ticker_items.extend([
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": ticker,
+                            "weight": "bold",
+                            "size": "sm",
+                            "flex": 1,
+                        },
+                        {
+                            "type": "text",
+                            "text": f"฿{value:,.0f} ({pct:.0f}%)",
+                            "size": "sm",
+                            "color": "#666666",
+                            "align": "end",
+                        },
+                    ],
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [],
+                            "flex": filled,
+                            "backgroundColor": color,
+                            "height": "8px",
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [],
+                            "flex": unfilled,
+                            "backgroundColor": "#E5E7EB",
+                            "height": "8px",
+                        },
+                    ],
+                    "cornerRadius": "4px",
+                    "margin": "xs",
+                },
+                {"type": "spacer", "size": "md"},
+            ])
+        
+        return {
+            "type": "bubble",
+            "size": "kilo",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "📈 รายละเอียดสินทรัพย์",
+                        "weight": "bold",
+                        "size": "md",
+                        "color": "#FFFFFF",
+                    }
+                ],
+                "backgroundColor": "#1F2937",
+                "paddingAll": "15px",
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": ticker_items if ticker_items else [
+                    {"type": "text", "text": "ยังไม่มีสินทรัพย์", "color": "#888888"}
+                ],
+                "paddingAll": "15px",
+            },
+        }

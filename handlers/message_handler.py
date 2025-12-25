@@ -69,7 +69,7 @@ class MessageHandler:
         line_service.reply_text(reply_token, help_text)
 
     def _reply_status(self, reply_token: str, user_id: str) -> None:
-        """Reply with portfolio status."""
+        """Reply with portfolio status using visual Flex Messages."""
         holdings = sheets_service.get_holdings(user_id)
 
         if not holdings:
@@ -79,13 +79,46 @@ class MessageHandler:
             )
             return
 
-        # Format holdings
-        holdings_text = "📊 **สถานะพอร์ตการลงทุน**\n\n"
-        for asset, amount in holdings.items():
-            holdings_text += f"• {asset}: {amount:,.4f}\n"
-
-        holdings_text += "\n💡 ฟีเจอร์ดูมูลค่าปัจจุบันจะมาเร็วๆนี้!"
-        line_service.reply_text(reply_token, holdings_text)
+        # Calculate values (placeholder - 1000 THB per unit for demo)
+        # TODO: Integrate with price service for real values
+        holdings_data = []
+        total_value = 0
+        type_values = {"GOLD": 0, "STOCK": 0, "CRYPTO": 0}
+        
+        for ticker, qty in holdings.items():
+            value = qty * 1000  # Placeholder value
+            total_value += value
+            asset_type = FlexMessages.get_asset_type(ticker)
+            type_values[asset_type] += value
+            holdings_data.append({
+                "ticker": ticker,
+                "quantity": qty,
+                "value": value,
+                "asset_type": asset_type,
+            })
+        
+        # Calculate percentages
+        type_ratios = {}
+        for asset_type, value in type_values.items():
+            if value > 0:
+                type_ratios[asset_type] = (value / total_value) * 100
+        
+        for h in holdings_data:
+            h["percentage"] = (h["value"] / total_value) * 100 if total_value > 0 else 0
+        
+        # Sort by value descending
+        holdings_data.sort(key=lambda x: x["value"], reverse=True)
+        
+        # Send two Flex Messages as carousel
+        carousel = {
+            "type": "carousel",
+            "contents": [
+                FlexMessages.portfolio_overview(total_value, type_ratios),
+                FlexMessages.ticker_breakdown(holdings_data),
+            ],
+        }
+        
+        line_service.reply_flex(reply_token, "สถานะพอร์ตลงทุน", carousel)
 
     def _reply_dca(self, reply_token: str, user_id: str) -> None:
         """Reply with Smart DCA plan using rebalance-by-buying logic."""
