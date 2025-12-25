@@ -606,7 +606,7 @@ class FlexMessages:
                     "cornerRadius": "4px",
                     "margin": "xs",
                 },
-                {"type": "spacer", "size": "md"},
+                {"type": "separator", "margin": "md"},
             ])
         
         return {
