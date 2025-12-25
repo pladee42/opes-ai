@@ -186,6 +186,35 @@ class SheetsService:
 
         return {k: v for k, v in holdings.items() if v > 0}
 
+    def get_holdings_value(self, user_id: str) -> dict[str, dict]:
+        """Calculate holdings with THB values from transactions.
+        
+        Returns:
+            Dict of {asset: {quantity, total_thb, asset_type}}
+        """
+        transactions = self.get_transactions(user_id)
+        holdings: dict[str, dict] = {}
+
+        for tx in transactions:
+            asset = tx.get("asset", "")
+            amount = float(tx.get("amount", 0))
+            total_thb = float(tx.get("total_thb", 0))
+            asset_type = tx.get("asset_type", "")
+            side = tx.get("side", "BUY").upper()
+
+            if asset not in holdings:
+                holdings[asset] = {"quantity": 0, "total_thb": 0, "asset_type": asset_type}
+
+            if side == "BUY":
+                holdings[asset]["quantity"] += amount
+                holdings[asset]["total_thb"] += total_thb
+            elif side == "SELL":
+                holdings[asset]["quantity"] -= amount
+                holdings[asset]["total_thb"] -= total_thb
+
+        # Filter out zero or negative holdings
+        return {k: v for k, v in holdings.items() if v["quantity"] > 0}
+
 
 # Singleton instance
 sheets_service = SheetsService()

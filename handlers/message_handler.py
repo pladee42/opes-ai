@@ -70,7 +70,7 @@ class MessageHandler:
 
     def _reply_status(self, reply_token: str, user_id: str) -> None:
         """Reply with portfolio status using visual Flex Messages."""
-        holdings = sheets_service.get_holdings(user_id)
+        holdings = sheets_service.get_holdings_value(user_id)
 
         if not holdings:
             line_service.reply_text(
@@ -79,20 +79,19 @@ class MessageHandler:
             )
             return
 
-        # Calculate values (placeholder - 1000 THB per unit for demo)
-        # TODO: Integrate with price service for real values
+        # Calculate values from total_thb
         holdings_data = []
         total_value = 0
         type_values = {"GOLD": 0, "STOCK": 0, "CRYPTO": 0}
         
-        for ticker, qty in holdings.items():
-            value = qty * 1000  # Placeholder value
+        for ticker, data in holdings.items():
+            value = data["total_thb"]
             total_value += value
-            asset_type = FlexMessages.get_asset_type(ticker)
+            asset_type = data.get("asset_type") or FlexMessages.get_asset_type(ticker)
             type_values[asset_type] += value
             holdings_data.append({
                 "ticker": ticker,
-                "quantity": qty,
+                "quantity": data["quantity"],
                 "value": value,
                 "asset_type": asset_type,
             })
