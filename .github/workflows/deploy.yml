@@ -39,7 +39,13 @@ jobs:
             --allow-unauthenticated \
             --memory 512Mi \
             --timeout 120 \
-            --set-env-vars "TIINGO_API_KEY=${{ secrets.TIINGO_API_KEY }}"
+            --set-env-vars "\
+              LINE_CHANNEL_ACCESS_TOKEN=${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }},\
+              LINE_CHANNEL_SECRET=${{ secrets.LINE_CHANNEL_SECRET }},\
+              GOOGLE_SHEETS_ID=${{ secrets.GOOGLE_SHEETS_ID }},\
+              GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},\
+              LIFF_URL=${{ secrets.LIFF_URL }},\
+              TIINGO_API_KEY=${{ secrets.TIINGO_API_KEY }}"
 
       - name: Get Cloud Run URL
         id: cloudrun
