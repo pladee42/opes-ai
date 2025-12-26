@@ -488,7 +488,7 @@ class FlexMessages:
         
         return {
             "type": "bubble",
-            "size": "kilo",
+            "size": "mega",
             "header": {
                 "type": "box",
                 "layout": "vertical",
@@ -611,7 +611,7 @@ class FlexMessages:
         
         return {
             "type": "bubble",
-            "size": "kilo",
+            "size": "mega",
             "header": {
                 "type": "box",
                 "layout": "vertical",
