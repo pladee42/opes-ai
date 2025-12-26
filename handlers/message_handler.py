@@ -142,16 +142,14 @@ class MessageHandler:
             )
             return
 
-        # Get current holdings value (simplified - using quantity for now)
-        # TODO: Integrate with price_service for real-time values
-        holdings = sheets_service.get_holdings(user_id)
+        # Get current holdings with total_thb values (cost basis)
+        holdings = sheets_service.get_holdings_value(user_id)
         
-        # For now, treat holdings as values (will add price lookup later)
-        # This is a placeholder - in production, multiply quantity by current price
-        current_values = {}
-        for asset, qty in holdings.items():
-            # Placeholder: assume 1000 THB per unit for demo
-            current_values[asset] = qty * 1000
+        # Convert to simple {asset: value} dict for DCA calculator
+        current_values = {
+            asset: data["total_thb"]
+            for asset, data in holdings.items()
+        }
         
         # Calculate Smart DCA
         result = calculate_dca_rebalance(
