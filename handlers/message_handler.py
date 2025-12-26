@@ -69,7 +69,9 @@ class MessageHandler:
         line_service.reply_text(reply_token, help_text)
 
     def _reply_status(self, reply_token: str, user_id: str) -> None:
-        """Reply with portfolio status using visual Flex Messages."""
+        """Reply with portfolio status using visual Flex Messages with P/L."""
+        from services.price_service import price_service
+        
         holdings = sheets_service.get_holdings_value(user_id)
 
         if not holdings:
@@ -79,40 +81,71 @@ class MessageHandler:
             )
             return
 
-        # Calculate values from total_thb
+        # Get real-time prices
+        tickers = list(holdings.keys())
+        current_prices = price_service.get_prices_thb(tickers)
+        
+        # Calculate values with market prices
         holdings_data = []
-        total_value = 0
+        total_cost = 0
+        total_current = 0
         type_values = {"GOLD": 0, "STOCK": 0, "CRYPTO": 0}
         
         for ticker, data in holdings.items():
-            value = data["total_thb"]
-            total_value += value
+            cost_basis = data["total_thb"]
+            qty = data["quantity"]
             asset_type = data.get("asset_type") or FlexMessages.get_asset_type(ticker)
-            type_values[asset_type] += value
+            
+            # Calculate current market value
+            price = current_prices.get(ticker)
+            if price:
+                current_value = qty * price
+            else:
+                current_value = cost_basis  # Fallback to cost
+            
+            pl_amount = current_value - cost_basis
+            pl_percent = (pl_amount / cost_basis * 100) if cost_basis > 0 else 0
+            
+            total_cost += cost_basis
+            total_current += current_value
+            type_values[asset_type] += current_value
+            
             holdings_data.append({
                 "ticker": ticker,
-                "quantity": data["quantity"],
-                "value": value,
+                "quantity": qty,
+                "value": current_value,
+                "cost": cost_basis,
+                "pl_amount": pl_amount,
+                "pl_percent": pl_percent,
                 "asset_type": asset_type,
             })
         
-        # Calculate percentages
+        # Calculate total P/L
+        total_pl = total_current - total_cost
+        total_pl_percent = (total_pl / total_cost * 100) if total_cost > 0 else 0
+        
+        # Calculate percentages based on current market value
         type_ratios = {}
         for asset_type, value in type_values.items():
             if value > 0:
-                type_ratios[asset_type] = (value / total_value) * 100
+                type_ratios[asset_type] = (value / total_current) * 100
         
         for h in holdings_data:
-            h["percentage"] = (h["value"] / total_value) * 100 if total_value > 0 else 0
+            h["percentage"] = (h["value"] / total_current) * 100 if total_current > 0 else 0
         
         # Sort by value descending
         holdings_data.sort(key=lambda x: x["value"], reverse=True)
         
-        # Send two Flex Messages as carousel
+        # Send two Flex Messages as carousel with P/L
         carousel = {
             "type": "carousel",
             "contents": [
-                FlexMessages.portfolio_overview(total_value, type_ratios),
+                FlexMessages.portfolio_overview(
+                    total_current, 
+                    type_ratios, 
+                    total_pl=total_pl,
+                    total_pl_percent=total_pl_percent
+                ),
                 FlexMessages.ticker_breakdown(holdings_data),
             ],
         }
@@ -122,6 +155,7 @@ class MessageHandler:
     def _reply_dca(self, reply_token: str, user_id: str) -> None:
         """Reply with Smart DCA plan using rebalance-by-buying logic."""
         from utils.dca_calculator import calculate_dca_rebalance, format_dca_message
+        from services.price_service import price_service
         
         user = sheets_service.get_user(user_id)
         
@@ -142,16 +176,25 @@ class MessageHandler:
             )
             return
 
-        # Get current holdings with total_thb values (cost basis)
+        # Get current holdings with quantities
         holdings = sheets_service.get_holdings_value(user_id)
         
-        # Convert to simple {asset: value} dict for DCA calculator
-        current_values = {
-            asset: data["total_thb"]
-            for asset, data in holdings.items()
-        }
+        # Get real-time prices and calculate market values
+        tickers = list(holdings.keys())
+        current_prices = price_service.get_prices_thb(tickers)
         
-        # Calculate Smart DCA
+        current_values = {}
+        for asset, data in holdings.items():
+            qty = data["quantity"]
+            price = current_prices.get(asset)
+            if price:
+                # Use market value (qty * current price)
+                current_values[asset] = qty * price
+            else:
+                # Fallback to cost basis if price unavailable
+                current_values[asset] = data["total_thb"]
+        
+        # Calculate Smart DCA with market values
         result = calculate_dca_rebalance(
             monthly_budget=budget,
             target_allocation=allocation,

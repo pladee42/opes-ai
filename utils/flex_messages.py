@@ -438,12 +438,14 @@ class FlexMessages:
             return "STOCK"
 
     @classmethod
-    def portfolio_overview(cls, total_value: float, type_ratios: dict) -> dict:
+    def portfolio_overview(cls, total_value: float, type_ratios: dict, total_pl: float = None, total_pl_percent: float = None) -> dict:
         """Create portfolio overview Flex Message with asset type ratio bar.
         
         Args:
             total_value: Total portfolio value in THB
             type_ratios: Dict of {asset_type: percentage}, e.g. {"GOLD": 30, "STOCK": 40, "CRYPTO": 30}
+            total_pl: Optional total P/L amount in THB
+            total_pl_percent: Optional total P/L percentage
         """
         # Build ratio bar segments
         bar_segments = []
@@ -486,6 +488,27 @@ class FlexMessages:
                     "alignItems": "center",
                 })
         
+        # Build P/L indicator if provided
+        pl_content = []
+        if total_pl is not None and total_pl_percent is not None:
+            is_profit = total_pl >= 0
+            pl_color = "#10B981" if is_profit else "#EF4444"
+            pl_emoji = "🟢" if is_profit else "🔴"
+            pl_sign = "+" if is_profit else ""
+            
+            pl_content = [
+                {"type": "separator", "margin": "lg"},
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "text", "text": f"{pl_emoji} กำไร/ขาดทุน", "size": "sm", "color": "#666666", "flex": 1},
+                        {"type": "text", "text": f"{pl_sign}{total_pl_percent:.1f}% ({pl_sign}฿{abs(total_pl):,.0f})", "size": "sm", "weight": "bold", "color": pl_color, "align": "end"},
+                    ],
+                    "margin": "lg",
+                },
+            ]
+        
         return {
             "type": "bubble",
             "size": "mega",
@@ -516,7 +539,7 @@ class FlexMessages:
                     },
                     {
                         "type": "text",
-                        "text": f"฿{total_value:,.2f}",
+                        "text": f"฿{total_value:,.0f}",
                         "size": "xxl",
                         "weight": "bold",
                         "color": "#333333",
@@ -536,7 +559,7 @@ class FlexMessages:
                         "margin": "md",
                         "spacing": "lg",
                     },
-                ],
+                ] + pl_content,
                 "paddingAll": "15px",
             },
         }
@@ -674,15 +697,16 @@ class FlexMessages:
                     "layout": "horizontal",
                     "contents": [
                         {"type": "text", "text": h["ticker"], "weight": "bold", "size": "sm", "flex": 1},
-                        {"type": "text", "text": f"{h_sign}{h['pl_percent']:.1f}% ({h_sign}฿{abs(h['pl_amount']):,.0f})", "color": h_color, "size": "sm", "align": "end"},
+                        {"type": "text", "text": f"{h_sign}{h['pl_percent']:.1f}%", "weight": "bold", "color": h_color, "size": "sm", "align": "end"},
                     ],
-                    "margin": "lg",  # Add spacing from header
+                    "margin": "lg",
                 },
                 {
                     "type": "box",
                     "layout": "horizontal",
                     "contents": [
-                        {"type": "text", "text": f"฿{h['cost']:,.0f} → ฿{h['current']:,.0f}", "size": "xs", "color": "#888888"},
+                        {"type": "text", "text": f"฿{h['cost']:,.0f} → ฿{h['current']:,.0f}", "size": "xs", "color": "#888888", "flex": 1},
+                        {"type": "text", "text": f"({h_sign}฿{abs(h['pl_amount']):,.0f})", "size": "xs", "color": h_color, "align": "end"},
                     ],
                     "margin": "xs",
                 },
