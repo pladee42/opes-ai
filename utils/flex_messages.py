@@ -674,15 +674,15 @@ class FlexMessages:
                     "layout": "horizontal",
                     "contents": [
                         {"type": "text", "text": h["ticker"], "weight": "bold", "size": "sm", "flex": 1},
-                        {"type": "text", "text": f"{h_sign}฿{h['pl_amount']:,.0f}", "color": h_color, "size": "sm", "align": "end"},
+                        {"type": "text", "text": f"{h_sign}{h['pl_percent']:.1f}% ({h_sign}฿{abs(h['pl_amount']):,.0f})", "color": h_color, "size": "sm", "align": "end"},
                     ],
+                    "margin": "lg",  # Add spacing from header
                 },
                 {
                     "type": "box",
                     "layout": "horizontal",
                     "contents": [
-                        {"type": "text", "text": f"฿{h['cost']:,.0f} → ฿{h['current']:,.0f}", "size": "xs", "color": "#888888", "flex": 1},
-                        {"type": "text", "text": f"({h_sign}{h['pl_percent']:.1f}%)", "size": "xs", "color": h_color, "align": "end"},
+                        {"type": "text", "text": f"฿{h['cost']:,.0f} → ฿{h['current']:,.0f}", "size": "xs", "color": "#888888"},
                     ],
                     "margin": "xs",
                 },
@@ -730,7 +730,7 @@ class FlexMessages:
                         "layout": "horizontal",
                         "contents": [
                             {"type": "text", "text": f"{pl_emoji} กำไร/ขาดทุน", "weight": "bold", "size": "md", "flex": 1},
-                            {"type": "text", "text": f"{pl_sign}฿{abs(total_pl):,.0f} ({pl_sign}{total_pl_percent:.1f}%)", "weight": "bold", "size": "md", "color": pl_color, "align": "end"},
+                            {"type": "text", "text": f"{pl_sign}{total_pl_percent:.1f}% ({pl_sign}฿{abs(total_pl):,.0f})", "weight": "bold", "size": "md", "color": pl_color, "align": "end"},
                         ],
                         "margin": "lg",
                     },
