@@ -38,7 +38,7 @@ class MessageHandler:
         elif self._is_command(text, "record"):
             self._reply_record_tip(reply_token)
         elif self._is_command(text, "report"):
-            self._reply_report_coming_soon(reply_token)
+            self._reply_report(reply_token, user_id)
         elif self._is_command(text, "settings"):
             self._reply_settings(reply_token)
         else:
@@ -169,12 +169,72 @@ class MessageHandler:
             "📸 **บันทึกรายการ**\n\nส่งรูปหน้าจอการซื้อขายจาก:\n• Dime! (หุ้น US, ทอง)\n• Binance (คริปโต)\n\nมาได้เลย!",
         )
 
-    def _reply_report_coming_soon(self, reply_token: str) -> None:
-        """Reply that report feature is coming soon."""
-        line_service.reply_text(
-            reply_token,
-            "📈 **Performance Report**\n\nฟีเจอร์รายงานกำไรขาดทุนกำลังพัฒนาอยู่\n\n⏳ เร็วๆนี้!",
+    def _reply_report(self, reply_token: str, user_id: str) -> None:
+        """Reply with portfolio P/L report using real-time prices."""
+        from services.price_service import price_service
+        
+        holdings = sheets_service.get_holdings_value(user_id)
+        
+        if not holdings:
+            line_service.reply_text(
+                reply_token,
+                "📈 ยังไม่มีข้อมูลการลงทุน\n\nส่งรูปหน้าจอการซื้อขายมาเพื่อเริ่มบันทึกได้เลย 📸",
+            )
+            return
+        
+        # Get tickers for price lookup
+        tickers = list(holdings.keys())
+        current_prices = price_service.get_prices_thb(tickers)
+        
+        # Calculate P/L for each holding
+        total_cost = 0
+        total_current = 0
+        pl_data = []
+        
+        for ticker, data in holdings.items():
+            cost_basis = data["total_thb"]
+            qty = data["quantity"]
+            asset_type = data.get("asset_type", "STOCK")
+            
+            # Get current market value
+            price_thb = current_prices.get(ticker)
+            if price_thb:
+                current_value = qty * price_thb
+            else:
+                # Fallback to cost basis if price unavailable
+                current_value = cost_basis
+            
+            pl_amount = current_value - cost_basis
+            pl_percent = (pl_amount / cost_basis * 100) if cost_basis > 0 else 0
+            
+            total_cost += cost_basis
+            total_current += current_value
+            
+            pl_data.append({
+                "ticker": ticker,
+                "cost": cost_basis,
+                "current": current_value,
+                "pl_amount": pl_amount,
+                "pl_percent": pl_percent,
+                "asset_type": asset_type,
+            })
+        
+        # Sort by P/L amount descending
+        pl_data.sort(key=lambda x: x["pl_amount"], reverse=True)
+        
+        # Calculate totals
+        total_pl = total_current - total_cost
+        total_pl_percent = (total_pl / total_cost * 100) if total_cost > 0 else 0
+        
+        # Send P/L Flex Message
+        pl_flex = FlexMessages.report_pl(
+            total_cost=total_cost,
+            total_current=total_current,
+            total_pl=total_pl,
+            total_pl_percent=total_pl_percent,
+            holdings=pl_data,
         )
+        line_service.reply_flex(reply_token, "รายงานกำไร/ขาดทุน", pl_flex)
 
     def _reply_settings(self, reply_token: str) -> None:
         """Reply with budget selection."""

@@ -636,3 +636,108 @@ class FlexMessages:
                 "paddingAll": "15px",
             },
         }
+
+    @classmethod
+    def report_pl(
+        cls, 
+        total_cost: float, 
+        total_current: float, 
+        total_pl: float, 
+        total_pl_percent: float,
+        holdings: list
+    ) -> dict:
+        """Create P/L report Flex Message.
+        
+        Args:
+            total_cost: Total cost basis in THB
+            total_current: Total current value in THB
+            total_pl: Total P/L amount in THB
+            total_pl_percent: Total P/L percentage
+            holdings: List of dicts with ticker, cost, current, pl_amount, pl_percent
+        """
+        # Determine profit or loss color
+        is_profit = total_pl >= 0
+        pl_color = "#10B981" if is_profit else "#EF4444"  # Green or Red
+        pl_emoji = "🟢" if is_profit else "🔴"
+        pl_sign = "+" if is_profit else ""
+        
+        # Build holdings items
+        holdings_items = []
+        for h in holdings:
+            h_profit = h["pl_amount"] >= 0
+            h_color = "#10B981" if h_profit else "#EF4444"
+            h_sign = "+" if h_profit else ""
+            
+            holdings_items.extend([
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "text", "text": h["ticker"], "weight": "bold", "size": "sm", "flex": 1},
+                        {"type": "text", "text": f"{h_sign}฿{h['pl_amount']:,.0f}", "color": h_color, "size": "sm", "align": "end"},
+                    ],
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "text", "text": f"฿{h['cost']:,.0f} → ฿{h['current']:,.0f}", "size": "xs", "color": "#888888", "flex": 1},
+                        {"type": "text", "text": f"({h_sign}{h['pl_percent']:.1f}%)", "size": "xs", "color": h_color, "align": "end"},
+                    ],
+                    "margin": "xs",
+                },
+                {"type": "separator", "margin": "md"},
+            ])
+        
+        return {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "📈 รายงานกำไร/ขาดทุน", "weight": "bold", "size": "lg", "color": "#FFFFFF"},
+                ],
+                "backgroundColor": "#1F2937",
+                "paddingAll": "15px",
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    # Summary section
+                    {"type": "text", "text": "สรุป", "weight": "bold", "size": "md", "margin": "none"},
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": "ต้นทุน", "size": "sm", "color": "#666666", "flex": 1},
+                            {"type": "text", "text": f"฿{total_cost:,.0f}", "size": "sm", "align": "end"},
+                        ],
+                        "margin": "md",
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": "มูลค่าปัจจุบัน", "size": "sm", "color": "#666666", "flex": 1},
+                            {"type": "text", "text": f"฿{total_current:,.0f}", "size": "sm", "align": "end"},
+                        ],
+                        "margin": "sm",
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": f"{pl_emoji} กำไร/ขาดทุน", "weight": "bold", "size": "md", "flex": 1},
+                            {"type": "text", "text": f"{pl_sign}฿{abs(total_pl):,.0f} ({pl_sign}{total_pl_percent:.1f}%)", "weight": "bold", "size": "md", "color": pl_color, "align": "end"},
+                        ],
+                        "margin": "lg",
+                    },
+                    {"type": "separator", "margin": "lg"},
+                    # Holdings detail
+                    {"type": "text", "text": "รายละเอียด", "weight": "bold", "size": "md", "margin": "lg"},
+                ] + holdings_items,
+                "paddingAll": "15px",
+            },
+        }

@@ -1,90 +1,169 @@
-"""Price and currency service for fetching exchange rates and asset prices."""
+"""Price service using Tiingo API for stocks, crypto, and forex/gold."""
 
 import requests
 from typing import Optional
-from functools import lru_cache
-from datetime import datetime
+from datetime import datetime, timedelta
+
+from config import Config
 
 
 class PriceService:
-    """Service for fetching exchange rates and asset prices."""
+    """Service for fetching real-time prices from Tiingo."""
 
-    # Free exchange rate API
-    EXCHANGE_RATE_API = "https://api.exchangerate-api.com/v4/latest/USD"
+    BASE_URL = "https://api.tiingo.com"
+    
+    # Known crypto tickers
+    CRYPTO_TICKERS = {
+        "BTC", "ETH", "XLM", "SOL", "DOGE", "XRP", "ADA", "DOT", 
+        "MATIC", "AVAX", "LINK", "UNI", "ATOM", "LTC", "BCH"
+    }
+    
+    # Forex pairs (including GOLD as xauusd)
+    FOREX_TICKERS = {
+        "GOLD": "xauusd",
+        "XAUUSD": "xauusd",
+        "THB": "thbusd",  # For USD to THB conversion
+    }
 
-    # Cache duration in seconds (1 hour)
-    _cache_timestamp: Optional[datetime] = None
-    _cached_rates: Optional[dict] = None
-    CACHE_DURATION = 3600
+    def __init__(self):
+        """Initialize the price service."""
+        self.api_key = Config.TIINGO_API_KEY
+        self.headers = {
+            "Authorization": f"Token {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        self._thb_rate_cache: Optional[float] = None
+        self._thb_rate_timestamp: Optional[datetime] = None
 
-    def get_usd_to_thb_rate(self) -> float:
-        """Get current USD to THB exchange rate.
+    def _is_crypto(self, ticker: str) -> bool:
+        """Check if ticker is a cryptocurrency."""
+        return ticker.upper() in self.CRYPTO_TICKERS
 
-        Returns:
-            Exchange rate (e.g., 34.5 means 1 USD = 34.5 THB)
-        """
-        rates = self._get_exchange_rates()
-        if rates and "THB" in rates:
-            return rates["THB"]
+    def _is_forex(self, ticker: str) -> bool:
+        """Check if ticker is in forex/commodities."""
+        return ticker.upper() in self.FOREX_TICKERS
 
-        # Fallback rate if API fails
-        print("⚠️ Using fallback USD/THB rate: 35.0")
-        return 35.0
-
-    def _get_exchange_rates(self) -> Optional[dict]:
-        """Fetch exchange rates from API with caching."""
-        now = datetime.now()
-
-        # Check cache
-        if (
-            self._cached_rates
-            and self._cache_timestamp
-            and (now - self._cache_timestamp).seconds < self.CACHE_DURATION
-        ):
-            return self._cached_rates
-
+    def _get_stock_price(self, ticker: str) -> Optional[float]:
+        """Fetch stock price from IEX endpoint."""
         try:
-            response = requests.get(self.EXCHANGE_RATE_API, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-
-            self._cached_rates = data.get("rates", {})
-            self._cache_timestamp = now
-
-            print(f"💱 Updated exchange rates: USD/THB = {self._cached_rates.get('THB', 'N/A')}")
-            return self._cached_rates
-
+            url = f"{self.BASE_URL}/iex/{ticker.lower()}/prices"
+            response = requests.get(url, headers=self.headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    return float(data[0].get("last", data[0].get("close", 0)))
+            return None
         except Exception as e:
-            print(f"Error fetching exchange rates: {e}")
-            return self._cached_rates  # Return stale cache if available
+            print(f"Error fetching stock price for {ticker}: {e}")
+            return None
 
-    def convert_to_thb(self, amount: float, currency: str) -> float:
-        """Convert an amount to THB.
+    def _get_crypto_price(self, ticker: str) -> Optional[float]:
+        """Fetch crypto price from crypto endpoint."""
+        try:
+            # Tiingo crypto format: btcusd
+            crypto_ticker = f"{ticker.lower()}usd"
+            url = f"{self.BASE_URL}/tiingo/crypto/prices"
+            params = {"tickers": crypto_ticker}
+            
+            response = requests.get(url, headers=self.headers, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    price_data = data[0].get("priceData", [])
+                    if price_data:
+                        return float(price_data[0].get("close", 0))
+            return None
+        except Exception as e:
+            print(f"Error fetching crypto price for {ticker}: {e}")
+            return None
 
-        Args:
-            amount: The amount to convert
-            currency: Source currency code (e.g., 'USD', 'THB')
+    def _get_forex_price(self, ticker: str) -> Optional[float]:
+        """Fetch forex/gold price from forex endpoint."""
+        try:
+            # Map our ticker to Tiingo forex pair
+            forex_pair = self.FOREX_TICKERS.get(ticker.upper(), f"{ticker.lower()}usd")
+            url = f"{self.BASE_URL}/fx/{forex_pair}/top"
+            
+            response = requests.get(url, headers=self.headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    # Use mid price (average of bid and ask)
+                    bid = float(data[0].get("bidPrice", 0))
+                    ask = float(data[0].get("askPrice", 0))
+                    return (bid + ask) / 2 if bid and ask else None
+            return None
+        except Exception as e:
+            print(f"Error fetching forex price for {ticker}: {e}")
+            return None
 
+    def get_usd_thb_rate(self) -> float:
+        """Get current USD to THB exchange rate with caching."""
+        # Cache for 5 minutes
+        if (self._thb_rate_cache and self._thb_rate_timestamp and 
+            datetime.now() - self._thb_rate_timestamp < timedelta(minutes=5)):
+            return self._thb_rate_cache
+        
+        rate = self._get_forex_price("THB")
+        if rate:
+            # thbusd gives USD per THB, we need THB per USD
+            self._thb_rate_cache = 1 / rate
+            self._thb_rate_timestamp = datetime.now()
+            return self._thb_rate_cache
+        
+        # Fallback rate if API fails
+        return 34.0
+
+    def get_price_usd(self, ticker: str) -> Optional[float]:
+        """Get price in USD for any asset type."""
+        ticker_upper = ticker.upper()
+        
+        if self._is_forex(ticker_upper):
+            return self._get_forex_price(ticker_upper)
+        elif self._is_crypto(ticker_upper):
+            return self._get_crypto_price(ticker_upper)
+        else:
+            # Default to stock
+            return self._get_stock_price(ticker_upper)
+
+    def get_price_thb(self, ticker: str) -> Optional[float]:
+        """Get price in THB for any asset type."""
+        price_usd = self.get_price_usd(ticker)
+        if price_usd is None:
+            return None
+        
+        thb_rate = self.get_usd_thb_rate()
+        return price_usd * thb_rate
+
+    def get_prices_thb(self, tickers: list[str]) -> dict[str, float]:
+        """Get prices for multiple tickers in THB.
+        
         Returns:
-            Amount in THB
+            Dict of {ticker: price_thb}, missing tickers are excluded
         """
-        currency = currency.upper().strip()
+        prices = {}
+        thb_rate = self.get_usd_thb_rate()  # Fetch once for efficiency
+        
+        for ticker in tickers:
+            price_usd = self.get_price_usd(ticker)
+            if price_usd is not None:
+                prices[ticker] = price_usd * thb_rate
+        
+        return prices
 
+    # Legacy method for backward compatibility
+    def convert_to_thb(self, amount: float, currency: str) -> float:
+        """Convert an amount to THB."""
+        currency = currency.upper().strip()
+        
         if currency == "THB":
             return amount
-
-        if currency == "USD":
-            rate = self.get_usd_to_thb_rate()
-            return amount * rate
-
-        # For other currencies, try to get rate via USD
-        rates = self._get_exchange_rates()
-        if rates and currency in rates:
-            # Convert to USD first, then to THB
-            usd_amount = amount / rates[currency]
-            return usd_amount * rates.get("THB", 35.0)
-
-        print(f"⚠️ Unknown currency: {currency}, returning original amount")
+        elif currency in ("USD", "USDT"):
+            return amount * self.get_usd_thb_rate()
+        
         return amount
 
 

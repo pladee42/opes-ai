@@ -29,6 +29,9 @@ class Config:
     # LIFF
     LIFF_URL = os.getenv("LIFF_URL", "https://liff.line.me/YOUR_LIFF_ID")
 
+    # Price API
+    TIINGO_API_KEY = os.getenv("TIINGO_API_KEY", "")
+
     @classmethod
     def validate(cls) -> list[str]:
         """Validate required configuration. Returns list of missing keys."""

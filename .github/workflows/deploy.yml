@@ -38,7 +38,8 @@ jobs:
             --region $REGION \
             --allow-unauthenticated \
             --memory 512Mi \
-            --timeout 120
+            --timeout 120 \
+            --set-env-vars "TIINGO_API_KEY=${{ secrets.TIINGO_API_KEY }}"
 
       - name: Get Cloud Run URL
         id: cloudrun
