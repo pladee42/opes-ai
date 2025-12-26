@@ -418,9 +418,9 @@ class FlexMessages:
 
     # Asset type colors
     ASSET_COLORS = {
-        "GOLD": "#10B981",      # Green
-        "STOCK": "#6366F1",     # Purple
-        "CRYPTO": "#F59E0B",    # Orange
+        "STOCK": "#10B981",      # Green
+        "CRYPTO": "#6366F1",     # Purple
+        "GOLD": "#F59E0B",    # Orange
         "CASH": "#6B7280",      # Gray
     }
 

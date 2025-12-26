@@ -83,6 +83,20 @@ class LineService:
             print(f"Error downloading content: {e}")
             return None
 
+    def push_text(self, user_id: str, text: str) -> None:
+        """Send a push message to a user."""
+        from linebot.v3.messaging import PushMessageRequest
+        
+        try:
+            self.api.push_message(
+                PushMessageRequest(
+                    to=user_id,
+                    messages=[TextMessage(text=text)],
+                )
+            )
+        except Exception as e:
+            print(f"Error pushing message: {e}")
+
 
 # Singleton instance
 line_service = LineService()

@@ -26,9 +26,9 @@ Extract the following information and return ONLY a valid JSON object (no markdo
 ## Asset Normalization Rules:
 
 ### Gold (asset_type = "GOLD"):
-All gold assets should be normalized to "XAUUSD" for consistent price tracking.
-- Dime! gold: MTS-GOLD, YLG-GOLD, GOLD, ทองคำ → normalize to "XAUUSD"
-- Binance gold: PAXG, XAUT → normalize to "XAUUSD"
+All gold assets should be normalized to "GOLD" for consistent tracking.
+- Dime! gold: MTS-GOLD, YLG-GOLD, XAUUSD, ทองคำ → normalize to "GOLD"
+- Binance gold: PAXG, XAUT → normalize to "GOLD"
 
 ### Stocks (asset_type = "STOCK"):
 Keep the original ticker symbol as-is.

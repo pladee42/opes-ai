@@ -74,6 +74,15 @@ def save_allocation():
     success = sheets_service.update_user(user_id, update_data)
     
     if success:
+        # Send push message to confirm save
+        from services.line_service import line_service
+        
+        budget_text = f"งบ: ฿{monthly_budget:,}/เดือน\n" if monthly_budget else ""
+        allocation_text = "\n".join([f"• {ticker}: {weight}%" for ticker, weight in normalized_allocation.items()])
+        
+        message = f"✅ บันทึกแผนลงทุนเรียบร้อย!\n\n{budget_text}📊 สัดส่วน:\n{allocation_text}\n\n💡 พิมพ์ #dca เพื่อดูแผนซื้อ"
+        line_service.push_text(user_id, message)
+        
         return {"status": "ok", "message": "Allocation saved", "normalized": normalized_allocation}
     else:
         return {"error": "User not found"}, 404
