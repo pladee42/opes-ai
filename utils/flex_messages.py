@@ -506,7 +506,7 @@ class FlexMessages:
                     "layout": "horizontal",
                     "contents": [
                         {"type": "text", "text": f"{pl_emoji} กำไร/ขาดทุน", "size": "sm", "color": "#666666", "flex": 1},
-                        {"type": "text", "text": f"{pl_sign}{total_pl_percent:.1f}% ({pl_sign}฿{abs(total_pl):,.0f})", "size": "sm", "weight": "bold", "color": pl_color, "align": "end"},
+                        {"type": "text", "text": f"{pl_sign}{total_pl_percent:.2f}% ({pl_sign}฿{abs(total_pl):,.0f})", "size": "sm", "weight": "bold", "color": pl_color, "align": "end"},
                     ],
                     "margin": "lg",
                 },
@@ -720,7 +720,7 @@ class FlexMessages:
                     "layout": "horizontal",
                     "contents": [
                         {"type": "text", "text": h["ticker"], "weight": "bold", "size": "sm", "flex": 1},
-                        {"type": "text", "text": f"{h_sign}{h['pl_percent']:.1f}%", "weight": "bold", "color": h_color, "size": "sm", "align": "end"},
+                        {"type": "text", "text": f"{h_sign}{h['pl_percent']:.2f}%", "weight": "bold", "color": h_color, "size": "sm", "align": "end"},
                     ],
                     "margin": "lg",
                 },
@@ -777,7 +777,7 @@ class FlexMessages:
                         "layout": "horizontal",
                         "contents": [
                             {"type": "text", "text": f"{pl_emoji} กำไร/ขาดทุน", "weight": "bold", "size": "md", "flex": 1},
-                            {"type": "text", "text": f"{pl_sign}{total_pl_percent:.1f}% ({pl_sign}฿{abs(total_pl):,.0f})", "weight": "bold", "size": "md", "color": pl_color, "align": "end"},
+                            {"type": "text", "text": f"{pl_sign}{total_pl_percent:.2f}% ({pl_sign}฿{abs(total_pl):,.0f})", "weight": "bold", "size": "md", "color": pl_color, "align": "end"},
                         ],
                         "margin": "lg",
                     },
