@@ -7,6 +7,11 @@ from datetime import datetime, timedelta
 from config import Config
 
 
+class PriceError(Exception):
+    """Raised when price data cannot be fetched."""
+    pass
+
+
 class PriceService:
     """Service for fetching real-time prices from Tiingo."""
 
@@ -84,7 +89,8 @@ class PriceService:
         try:
             # Map our ticker to Tiingo forex pair
             forex_pair = self.FOREX_TICKERS.get(ticker.upper(), f"{ticker.lower()}usd")
-            url = f"{self.BASE_URL}/fx/{forex_pair}/top"
+            # Correct Tiingo forex endpoint format
+            url = f"{self.BASE_URL}/tiingo/fx/top?tickers={forex_pair}"
             
             response = requests.get(url, headers=self.headers, timeout=10)
             
@@ -101,21 +107,31 @@ class PriceService:
             return None
 
     def get_usd_thb_rate(self) -> float:
-        """Get current USD to THB exchange rate with caching."""
+        """Get current USD to THB exchange rate with caching.
+        
+        Raises:
+            PriceError: If unable to fetch exchange rate
+        """
         # Cache for 5 minutes
         if (self._thb_rate_cache and self._thb_rate_timestamp and 
             datetime.now() - self._thb_rate_timestamp < timedelta(minutes=5)):
             return self._thb_rate_cache
         
-        rate = self._get_forex_price("THB")
-        if rate:
-            # thbusd gives USD per THB, we need THB per USD
-            self._thb_rate_cache = 1 / rate
-            self._thb_rate_timestamp = datetime.now()
-            return self._thb_rate_cache
+        # Use frankfurter.app (free, no API key needed)
+        try:
+            url = "https://api.frankfurter.app/latest?from=USD&to=THB"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                rate = data.get("rates", {}).get("THB")
+                if rate:
+                    self._thb_rate_cache = rate
+                    self._thb_rate_timestamp = datetime.now()
+                    return self._thb_rate_cache
+        except Exception as e:
+            raise PriceError(f"ไม่สามารถดึงอัตราแลกเปลี่ยน USD/THB ได้: {e}")
         
-        # Fallback rate if API fails
-        return 34.0
+        raise PriceError("ไม่สามารถดึงอัตราแลกเปลี่ยน USD/THB ได้")
 
     def get_price_usd(self, ticker: str) -> Optional[float]:
         """Get price in USD for any asset type."""

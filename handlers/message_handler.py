@@ -70,7 +70,7 @@ class MessageHandler:
 
     def _reply_status(self, reply_token: str, user_id: str) -> None:
         """Reply with portfolio status using visual Flex Messages with P/L."""
-        from services.price_service import price_service
+        from services.price_service import price_service, PriceError
         
         holdings = sheets_service.get_holdings_value(user_id)
 
@@ -81,81 +81,88 @@ class MessageHandler:
             )
             return
 
-        # Get real-time prices
-        tickers = list(holdings.keys())
-        current_prices = price_service.get_prices_thb(tickers)
-        
-        # Calculate values with market prices
-        holdings_data = []
-        total_cost = 0
-        total_current = 0
-        type_values = {"GOLD": 0, "STOCK": 0, "CRYPTO": 0}
-        
-        for ticker, data in holdings.items():
-            cost_basis = data["total_thb"]
-            qty = data["quantity"]
-            asset_type = data.get("asset_type") or FlexMessages.get_asset_type(ticker)
+        try:
+            # Get real-time prices
+            tickers = list(holdings.keys())
+            current_prices = price_service.get_prices_thb(tickers)
             
-            # Calculate current market value
-            price = current_prices.get(ticker)
-            if price:
-                current_value = qty * price
-            else:
-                current_value = cost_basis  # Fallback to cost
+            # Check for missing prices - ERROR instead of fallback
+            missing_tickers = [t for t in tickers if t not in current_prices]
+            if missing_tickers:
+                raise PriceError(f"ไม่สามารถดึงราคา: {', '.join(missing_tickers)}")
             
-            pl_amount = current_value - cost_basis
-            pl_percent = (pl_amount / cost_basis * 100) if cost_basis > 0 else 0
+            # Calculate values with market prices
+            holdings_data = []
+            total_cost = 0
+            total_current = 0
+            type_values = {"GOLD": 0, "STOCK": 0, "CRYPTO": 0}
             
-            total_cost += cost_basis
-            total_current += current_value
-            type_values[asset_type] += current_value
+            for ticker, data in holdings.items():
+                cost_basis = data["total_thb"]
+                qty = data["quantity"]
+                asset_type = data.get("asset_type") or FlexMessages.get_asset_type(ticker)
+                
+                current_value = qty * current_prices[ticker]
+                
+                pl_amount = current_value - cost_basis
+                pl_percent = (pl_amount / cost_basis * 100) if cost_basis > 0 else 0
+                
+                total_cost += cost_basis
+                total_current += current_value
+                type_values[asset_type] += current_value
+                
+                holdings_data.append({
+                    "ticker": ticker,
+                    "quantity": qty,
+                    "value": current_value,
+                    "cost": cost_basis,
+                    "pl_amount": pl_amount,
+                    "pl_percent": pl_percent,
+                    "asset_type": asset_type,
+                })
             
-            holdings_data.append({
-                "ticker": ticker,
-                "quantity": qty,
-                "value": current_value,
-                "cost": cost_basis,
-                "pl_amount": pl_amount,
-                "pl_percent": pl_percent,
-                "asset_type": asset_type,
-            })
-        
-        # Calculate total P/L
-        total_pl = total_current - total_cost
-        total_pl_percent = (total_pl / total_cost * 100) if total_cost > 0 else 0
-        
-        # Calculate percentages based on current market value
-        type_ratios = {}
-        for asset_type, value in type_values.items():
-            if value > 0:
-                type_ratios[asset_type] = (value / total_current) * 100
-        
-        for h in holdings_data:
-            h["percentage"] = (h["value"] / total_current) * 100 if total_current > 0 else 0
-        
-        # Sort by value descending
-        holdings_data.sort(key=lambda x: x["value"], reverse=True)
-        
-        # Send two Flex Messages as carousel with P/L
-        carousel = {
-            "type": "carousel",
-            "contents": [
-                FlexMessages.portfolio_overview(
-                    total_current, 
-                    type_ratios, 
-                    total_pl=total_pl,
-                    total_pl_percent=total_pl_percent
-                ),
-                FlexMessages.ticker_breakdown(holdings_data),
-            ],
-        }
-        
-        line_service.reply_flex(reply_token, "สถานะพอร์ตลงทุน", carousel)
+            # Calculate total P/L
+            total_pl = total_current - total_cost
+            total_pl_percent = (total_pl / total_cost * 100) if total_cost > 0 else 0
+            
+            # Calculate percentages based on current market value
+            type_ratios = {}
+            for asset_type, value in type_values.items():
+                if value > 0:
+                    type_ratios[asset_type] = (value / total_current) * 100
+            
+            for h in holdings_data:
+                h["percentage"] = (h["value"] / total_current) * 100 if total_current > 0 else 0
+            
+            # Sort by value descending
+            holdings_data.sort(key=lambda x: x["value"], reverse=True)
+            
+            # Send two Flex Messages as carousel with P/L
+            carousel = {
+                "type": "carousel",
+                "contents": [
+                    FlexMessages.portfolio_overview(
+                        total_current, 
+                        type_ratios, 
+                        total_pl=total_pl,
+                        total_pl_percent=total_pl_percent
+                    ),
+                    FlexMessages.ticker_breakdown(holdings_data),
+                ],
+            }
+            
+            line_service.reply_flex(reply_token, "สถานะพอร์ตลงทุน", carousel)
+            
+        except PriceError as e:
+            line_service.reply_text(
+                reply_token,
+                f"❌ ไม่สามารถดึงข้อมูลราคาได้\n\n{str(e)}\n\nกรุณาลองใหม่อีกครั้ง",
+            )
 
     def _reply_dca(self, reply_token: str, user_id: str) -> None:
         """Reply with Smart DCA plan using rebalance-by-buying logic."""
         from utils.dca_calculator import calculate_dca_rebalance, format_dca_message
-        from services.price_service import price_service
+        from services.price_service import price_service, PriceError
         
         user = sheets_service.get_user(user_id)
         
@@ -176,34 +183,40 @@ class MessageHandler:
             )
             return
 
-        # Get current holdings with quantities
-        holdings = sheets_service.get_holdings_value(user_id)
-        
-        # Get real-time prices and calculate market values
-        tickers = list(holdings.keys())
-        current_prices = price_service.get_prices_thb(tickers)
-        
-        current_values = {}
-        for asset, data in holdings.items():
-            qty = data["quantity"]
-            price = current_prices.get(asset)
-            if price:
-                # Use market value (qty * current price)
-                current_values[asset] = qty * price
-            else:
-                # Fallback to cost basis if price unavailable
-                current_values[asset] = data["total_thb"]
-        
-        # Calculate Smart DCA with market values
-        result = calculate_dca_rebalance(
-            monthly_budget=budget,
-            target_allocation=allocation,
-            current_holdings=current_values,
-        )
-        
-        # Format and send
-        message = format_dca_message(result)
-        line_service.reply_text(reply_token, message)
+        try:
+            # Get current holdings with quantities
+            holdings = sheets_service.get_holdings_value(user_id)
+            
+            # Get real-time prices and calculate market values
+            tickers = list(holdings.keys())
+            current_prices = price_service.get_prices_thb(tickers)
+            
+            # Check for missing prices - ERROR instead of fallback
+            missing_tickers = [t for t in tickers if t not in current_prices]
+            if missing_tickers:
+                raise PriceError(f"ไม่สามารถดึงราคา: {', '.join(missing_tickers)}")
+            
+            current_values = {}
+            for asset, data in holdings.items():
+                qty = data["quantity"]
+                current_values[asset] = qty * current_prices[asset]
+            
+            # Calculate Smart DCA with market values
+            result = calculate_dca_rebalance(
+                monthly_budget=budget,
+                target_allocation=allocation,
+                current_holdings=current_values,
+            )
+            
+            # Format and send
+            message = format_dca_message(result)
+            line_service.reply_text(reply_token, message)
+            
+        except PriceError as e:
+            line_service.reply_text(
+                reply_token,
+                f"❌ ไม่สามารถดึงข้อมูลราคาได้\n\n{str(e)}\n\nกรุณาลองใหม่อีกครั้ง",
+            )
 
     def _reply_record_tip(self, reply_token: str) -> None:
         """Reply with tip to send image."""
@@ -214,7 +227,7 @@ class MessageHandler:
 
     def _reply_report(self, reply_token: str, user_id: str) -> None:
         """Reply with portfolio P/L report using real-time prices."""
-        from services.price_service import price_service
+        from services.price_service import price_service, PriceError
         
         holdings = sheets_service.get_holdings_value(user_id)
         
@@ -225,59 +238,65 @@ class MessageHandler:
             )
             return
         
-        # Get tickers for price lookup
-        tickers = list(holdings.keys())
-        current_prices = price_service.get_prices_thb(tickers)
-        
-        # Calculate P/L for each holding
-        total_cost = 0
-        total_current = 0
-        pl_data = []
-        
-        for ticker, data in holdings.items():
-            cost_basis = data["total_thb"]
-            qty = data["quantity"]
-            asset_type = data.get("asset_type", "STOCK")
+        try:
+            # Get tickers for price lookup
+            tickers = list(holdings.keys())
+            current_prices = price_service.get_prices_thb(tickers)
             
-            # Get current market value
-            price_thb = current_prices.get(ticker)
-            if price_thb:
-                current_value = qty * price_thb
-            else:
-                # Fallback to cost basis if price unavailable
-                current_value = cost_basis
+            # Check for missing prices - ERROR instead of fallback
+            missing_tickers = [t for t in tickers if t not in current_prices]
+            if missing_tickers:
+                raise PriceError(f"ไม่สามารถดึงราคา: {', '.join(missing_tickers)}")
             
-            pl_amount = current_value - cost_basis
-            pl_percent = (pl_amount / cost_basis * 100) if cost_basis > 0 else 0
+            # Calculate P/L for each holding
+            total_cost = 0
+            total_current = 0
+            pl_data = []
             
-            total_cost += cost_basis
-            total_current += current_value
+            for ticker, data in holdings.items():
+                cost_basis = data["total_thb"]
+                qty = data["quantity"]
+                asset_type = data.get("asset_type", "STOCK")
+                
+                current_value = qty * current_prices[ticker]
+                
+                pl_amount = current_value - cost_basis
+                pl_percent = (pl_amount / cost_basis * 100) if cost_basis > 0 else 0
+                
+                total_cost += cost_basis
+                total_current += current_value
+                
+                pl_data.append({
+                    "ticker": ticker,
+                    "cost": cost_basis,
+                    "current": current_value,
+                    "pl_amount": pl_amount,
+                    "pl_percent": pl_percent,
+                    "asset_type": asset_type,
+                })
             
-            pl_data.append({
-                "ticker": ticker,
-                "cost": cost_basis,
-                "current": current_value,
-                "pl_amount": pl_amount,
-                "pl_percent": pl_percent,
-                "asset_type": asset_type,
-            })
-        
-        # Sort by P/L amount descending
-        pl_data.sort(key=lambda x: x["pl_amount"], reverse=True)
-        
-        # Calculate totals
-        total_pl = total_current - total_cost
-        total_pl_percent = (total_pl / total_cost * 100) if total_cost > 0 else 0
-        
-        # Send P/L Flex Message
-        pl_flex = FlexMessages.report_pl(
-            total_cost=total_cost,
-            total_current=total_current,
-            total_pl=total_pl,
-            total_pl_percent=total_pl_percent,
-            holdings=pl_data,
-        )
-        line_service.reply_flex(reply_token, "รายงานกำไร/ขาดทุน", pl_flex)
+            # Sort by P/L amount descending
+            pl_data.sort(key=lambda x: x["pl_amount"], reverse=True)
+            
+            # Calculate totals
+            total_pl = total_current - total_cost
+            total_pl_percent = (total_pl / total_cost * 100) if total_cost > 0 else 0
+            
+            # Send P/L Flex Message
+            pl_flex = FlexMessages.report_pl(
+                total_cost=total_cost,
+                total_current=total_current,
+                total_pl=total_pl,
+                total_pl_percent=total_pl_percent,
+                holdings=pl_data,
+            )
+            line_service.reply_flex(reply_token, "รายงานกำไร/ขาดทุน", pl_flex)
+            
+        except PriceError as e:
+            line_service.reply_text(
+                reply_token,
+                f"❌ ไม่สามารถดึงข้อมูลราคาได้\n\n{str(e)}\n\nกรุณาลองใหม่อีกครั้ง",
+            )
 
     def _reply_settings(self, reply_token: str) -> None:
         """Reply with budget selection."""
