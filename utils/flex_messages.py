@@ -60,11 +60,10 @@ class FlexMessages:
                         "margin": "lg",
                         "spacing": "sm",
                         "contents": [
-                            FlexMessages._info_row(
-                                "จำนวน", f"{tx_data.get('amount', 0):,.4f}"
+                            FlexMessages._info_row(\n                                "จำนวน", f"{tx_data.get('amount', 0):,.4f}"
                             ),
                             FlexMessages._info_row(
-                                "ราคา", f"฿{tx_data.get('price', 0):,.2f}"
+                                "ราคา", f"{'$' if tx_data.get('original_currency') in ('USD', 'USDT') else '฿'}{tx_data.get('price', 0):,.2f}"
                             ),
                             FlexMessages._info_row(
                                 "มูลค่ารวม", f"฿{tx_data.get('total_thb', 0):,.2f}"
@@ -73,7 +72,9 @@ class FlexMessages:
                                 "แหล่งที่มา", tx_data.get("source_app", "")
                             ),
                             FlexMessages._info_row("วันที่", tx_data.get("date", "")),
-                        ],
+                        ] + ([FlexMessages._info_row(
+                                "💱 อัตราแลกเปลี่ยน", f"$1 = ฿{tx_data.get('usd_thb_rate', 0):.2f}"
+                            )] if tx_data.get('original_currency') in ('USD', 'USDT') else []),
                     },
                 ],
                 "paddingAll": "15px",
@@ -438,7 +439,7 @@ class FlexMessages:
             return "STOCK"
 
     @classmethod
-    def portfolio_overview(cls, total_value: float, type_ratios: dict, total_pl: float = None, total_pl_percent: float = None) -> dict:
+    def portfolio_overview(cls, total_value: float, type_ratios: dict, total_pl: float = None, total_pl_percent: float = None, usd_thb_rate: float = None) -> dict:
         """Create portfolio overview Flex Message with asset type ratio bar.
         
         Args:
@@ -446,6 +447,7 @@ class FlexMessages:
             type_ratios: Dict of {asset_type: percentage}, e.g. {"GOLD": 30, "STOCK": 40, "CRYPTO": 30}
             total_pl: Optional total P/L amount in THB
             total_pl_percent: Optional total P/L percentage
+            usd_thb_rate: Optional USD/THB exchange rate to display
         """
         # Build ratio bar segments
         bar_segments = []
@@ -509,7 +511,7 @@ class FlexMessages:
                 },
             ]
         
-        return {
+        result = {
             "type": "bubble",
             "size": "mega",
             "header": {
@@ -563,6 +565,24 @@ class FlexMessages:
                 "paddingAll": "15px",
             },
         }
+        
+        if usd_thb_rate:
+            result["footer"] = {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"$1 = ฿{usd_thb_rate:.2f}",
+                        "size": "xs",
+                        "color": "#888888",
+                        "align": "center",
+                    }
+                ],
+                "paddingAll": "8px",
+            }
+        
+        return result
 
     @classmethod
     def ticker_breakdown(cls, holdings: list) -> dict:
@@ -667,7 +687,8 @@ class FlexMessages:
         total_current: float, 
         total_pl: float, 
         total_pl_percent: float,
-        holdings: list
+        holdings: list,
+        usd_thb_rate: float = None
     ) -> dict:
         """Create P/L report Flex Message.
         
@@ -677,6 +698,7 @@ class FlexMessages:
             total_pl: Total P/L amount in THB
             total_pl_percent: Total P/L percentage
             holdings: List of dicts with ticker, cost, current, pl_amount, pl_percent
+            usd_thb_rate: Optional USD/THB exchange rate to display
         """
         # Determine profit or loss color
         is_profit = total_pl >= 0
@@ -713,7 +735,7 @@ class FlexMessages:
                 {"type": "separator", "margin": "md"},
             ])
         
-        return {
+        result = {
             "type": "bubble",
             "size": "mega",
             "header": {
@@ -765,3 +787,21 @@ class FlexMessages:
                 "paddingAll": "15px",
             },
         }
+        
+        if usd_thb_rate:
+            result["footer"] = {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"อัตราแลกเปลี่ยน $1 = ฿{usd_thb_rate:.2f}",
+                        "size": "xs",
+                        "color": "#888888",
+                        "align": "center",
+                    }
+                ],
+                "paddingAll": "8px",
+            }
+        
+        return result

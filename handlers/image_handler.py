@@ -59,10 +59,12 @@ class ImageHandler:
         # 3. Convert currency to THB if needed
         currency = parsed.get("currency", "THB").upper()
         total_original = float(parsed.get("total", 0) or 0)
+        usd_thb_rate = None
         
         if currency in ("USD", "USDT"):
-            total_thb = price_service.convert_to_thb(total_original, "USD")
-            print(f"💱 Converted {total_original} {currency} → {total_thb:.2f} THB")
+            usd_thb_rate = price_service.get_usd_thb_rate()
+            total_thb = total_original * usd_thb_rate
+            print(f"💱 Converted {total_original} {currency} → {total_thb:.2f} THB (rate: {usd_thb_rate:.2f})")
         else:
             total_thb = total_original
         
@@ -84,6 +86,8 @@ class ImageHandler:
         # 6. Reply with confirmation
         tx_data = transaction.to_dict()
         tx_data["original_currency"] = currency  # Include for display
+        if usd_thb_rate:
+            tx_data["usd_thb_rate"] = usd_thb_rate
         flex_content = FlexMessages.transaction_confirmation(tx_data)
         line_service.reply_flex(
             reply_token,

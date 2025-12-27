@@ -82,9 +82,10 @@ class MessageHandler:
             return
 
         try:
-            # Get real-time prices
+            # Get real-time prices and exchange rate
             tickers = list(holdings.keys())
             current_prices = price_service.get_prices_thb(tickers)
+            usd_thb_rate = price_service.get_usd_thb_rate()
             
             # Check for missing prices - ERROR instead of fallback
             missing_tickers = [t for t in tickers if t not in current_prices]
@@ -145,7 +146,8 @@ class MessageHandler:
                         total_current, 
                         type_ratios, 
                         total_pl=total_pl,
-                        total_pl_percent=total_pl_percent
+                        total_pl_percent=total_pl_percent,
+                        usd_thb_rate=usd_thb_rate
                     ),
                     FlexMessages.ticker_breakdown(holdings_data),
                 ],
@@ -239,9 +241,10 @@ class MessageHandler:
             return
         
         try:
-            # Get tickers for price lookup
+            # Get tickers for price lookup and exchange rate
             tickers = list(holdings.keys())
             current_prices = price_service.get_prices_thb(tickers)
+            usd_thb_rate = price_service.get_usd_thb_rate()
             
             # Check for missing prices - ERROR instead of fallback
             missing_tickers = [t for t in tickers if t not in current_prices]
@@ -289,6 +292,7 @@ class MessageHandler:
                 total_pl=total_pl,
                 total_pl_percent=total_pl_percent,
                 holdings=pl_data,
+                usd_thb_rate=usd_thb_rate,
             )
             line_service.reply_flex(reply_token, "รายงานกำไร/ขาดทุน", pl_flex)
             
