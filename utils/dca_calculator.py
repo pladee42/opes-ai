@@ -92,11 +92,12 @@ def calculate_dca_rebalance(
     }
 
 
-def format_dca_message(result: dict) -> str:
+def format_dca_message(result: dict, usd_thb_rate: float = None) -> str:
     """Format DCA calculation result as a readable message.
     
     Args:
         result: Output from calculate_dca_rebalance
+        usd_thb_rate: Optional USD/THB exchange rate for USD display
         
     Returns:
         Formatted Thai text message
@@ -117,7 +118,13 @@ def format_dca_message(result: dict) -> str:
         status_emoji = "🔴" if r["status"] == "underweight" else ("🟢" if r["status"] == "overweight" else "⚪")
         
         lines.append(f"{status_emoji} **{r['asset']}**")
-        lines.append(f"   ซื้อ: ฿{r['buy_amount']:,.0f}")
+        
+        # Format buy amount with optional USD
+        buy_text = f"   ซื้อ: ฿{r['buy_amount']:,.0f}"
+        if usd_thb_rate:
+            usd_amount = r['buy_amount'] / usd_thb_rate
+            buy_text += f" (${usd_amount:,.2f})"
+        lines.append(buy_text)
         
         if r["current_value"] > 0:
             lines.append(f"   ปัจจุบัน: ฿{r['current_value']:,.0f} ({r['current_pct']:.0f}% → {r['target_pct']:.0f}%)")

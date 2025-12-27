@@ -220,8 +220,11 @@ class MessageHandler:
                 current_holdings=current_values,
             )
             
+            # Get USD/THB rate for display
+            usd_thb_rate = price_service.get_usd_thb_rate()
+            
             # Format and send
-            message = format_dca_message(result)
+            message = format_dca_message(result, usd_thb_rate)
             line_service.reply_text(reply_token, message)
             
         except PriceError as e:

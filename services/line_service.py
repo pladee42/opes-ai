@@ -97,6 +97,20 @@ class LineService:
         except Exception as e:
             print(f"Error pushing message: {e}")
 
+    def push_flex(self, user_id: str, alt_text: str, flex_content: dict) -> None:
+        """Send a push Flex Message to a user."""
+        from linebot.v3.messaging import PushMessageRequest, FlexMessage, FlexContainer
+        
+        try:
+            self.api.push_message(
+                PushMessageRequest(
+                    to=user_id,
+                    messages=[FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))],
+                )
+            )
+        except Exception as e:
+            print(f"Error pushing Flex message: {e}")
+
 
 # Singleton instance
 line_service = LineService()
