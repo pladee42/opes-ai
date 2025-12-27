@@ -3,6 +3,7 @@
 import requests
 from typing import Optional
 from datetime import datetime, timedelta
+import yfinance as yf
 
 from config import Config
 
@@ -49,7 +50,8 @@ class PriceService:
         return ticker.upper() in self.FOREX_TICKERS
 
     def _get_stock_price(self, ticker: str) -> Optional[float]:
-        """Fetch stock price from IEX endpoint."""
+        """Fetch stock price from IEX endpoint with yfinance fallback."""
+        # Try Tiingo first
         try:
             url = f"{self.BASE_URL}/iex/{ticker.lower()}/prices"
             response = requests.get(url, headers=self.headers, timeout=10)
@@ -58,15 +60,24 @@ class PriceService:
                 data = response.json()
                 if data and len(data) > 0:
                     return float(data[0].get("last", data[0].get("close", 0)))
-            return None
         except Exception as e:
-            print(f"Error fetching stock price for {ticker}: {e}")
-            return None
+            print(f"Tiingo error for {ticker}: {e}")
+        
+        # Fallback to yfinance
+        try:
+            stock = yf.Ticker(ticker)
+            info = stock.history(period="1d")
+            if not info.empty:
+                return float(info['Close'].iloc[-1])
+        except Exception as e:
+            print(f"yfinance error for {ticker}: {e}")
+        
+        return None
 
     def _get_crypto_price(self, ticker: str) -> Optional[float]:
-        """Fetch crypto price from crypto endpoint."""
+        """Fetch crypto price from crypto endpoint with yfinance fallback."""
+        # Try Tiingo first
         try:
-            # Tiingo crypto format: btcusd
             crypto_ticker = f"{ticker.lower()}usd"
             url = f"{self.BASE_URL}/tiingo/crypto/prices"
             params = {"tickers": crypto_ticker}
@@ -79,17 +90,27 @@ class PriceService:
                     price_data = data[0].get("priceData", [])
                     if price_data:
                         return float(price_data[0].get("close", 0))
-            return None
         except Exception as e:
-            print(f"Error fetching crypto price for {ticker}: {e}")
-            return None
+            print(f"Tiingo crypto error for {ticker}: {e}")
+        
+        # Fallback to yfinance
+        try:
+            # yfinance uses ticker-USD format for crypto
+            yf_ticker = f"{ticker.upper()}-USD"
+            crypto = yf.Ticker(yf_ticker)
+            info = crypto.history(period="1d")
+            if not info.empty:
+                return float(info['Close'].iloc[-1])
+        except Exception as e:
+            print(f"yfinance crypto error for {ticker}: {e}")
+        
+        return None
 
     def _get_forex_price(self, ticker: str) -> Optional[float]:
-        """Fetch forex/gold price from forex endpoint."""
+        """Fetch forex/gold price from forex endpoint with yfinance fallback."""
+        # Try Tiingo first
         try:
-            # Map our ticker to Tiingo forex pair
             forex_pair = self.FOREX_TICKERS.get(ticker.upper(), f"{ticker.lower()}usd")
-            # Correct Tiingo forex endpoint format
             url = f"{self.BASE_URL}/tiingo/fx/top?tickers={forex_pair}"
             
             response = requests.get(url, headers=self.headers, timeout=10)
@@ -97,14 +118,24 @@ class PriceService:
             if response.status_code == 200:
                 data = response.json()
                 if data and len(data) > 0:
-                    # Use mid price (average of bid and ask)
                     bid = float(data[0].get("bidPrice", 0))
                     ask = float(data[0].get("askPrice", 0))
-                    return (bid + ask) / 2 if bid and ask else None
-            return None
+                    if bid and ask:
+                        return (bid + ask) / 2
         except Exception as e:
-            print(f"Error fetching forex price for {ticker}: {e}")
-            return None
+            print(f"Tiingo forex error for {ticker}: {e}")
+        
+        # Fallback to yfinance for GOLD
+        if ticker.upper() in ["GOLD", "XAUUSD"]:
+            try:
+                gold = yf.Ticker("GC=F")  # Gold futures
+                info = gold.history(period="1d")
+                if not info.empty:
+                    return float(info['Close'].iloc[-1])
+            except Exception as e:
+                print(f"yfinance gold error: {e}")
+        
+        return None
 
     def get_usd_thb_rate(self) -> float:
         """Get current USD to THB exchange rate with caching.
