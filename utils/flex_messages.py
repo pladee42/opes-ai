@@ -60,7 +60,8 @@ class FlexMessages:
                         "margin": "lg",
                         "spacing": "sm",
                         "contents": [
-                            FlexMessages._info_row(\n                                "จำนวน", f"{tx_data.get('amount', 0):,.4f}"
+                            FlexMessages._info_row(
+                                "จำนวน", f"{tx_data.get('amount', 0):,.4f}"
                             ),
                             FlexMessages._info_row(
                                 "ราคา", f"{'$' if tx_data.get('original_currency') in ('USD', 'USDT') else '฿'}{tx_data.get('price', 0):,.2f}"
