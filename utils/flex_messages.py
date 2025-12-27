@@ -806,3 +806,130 @@ class FlexMessages:
             }
         
         return result
+
+    @staticmethod
+    def service_status(services: dict, total_tests: int, passed: int, failed: int, timestamp) -> dict:
+        """Create service status Flex Message.
+        
+        Args:
+            services: Dict of {service_name: is_healthy}
+            total_tests: Total number of tests run
+            passed: Number of passed tests
+            failed: Number of failed tests
+            timestamp: datetime of status check
+        """
+        # Build service status items
+        service_items = []
+        all_healthy = all(services.values())
+        
+        for service_name, is_healthy in services.items():
+            status_emoji = "✅" if is_healthy else "❌"
+            status_color = "#10B981" if is_healthy else "#EF4444"
+            
+            service_items.extend([
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": status_emoji,
+                            "size": "md",
+                            "flex": 0,
+                        },
+                        {
+                            "type": "text",
+                            "text": service_name,
+                            "size": "sm",
+                            "color": status_color,
+                            "margin": "md",
+                            "flex": 1,
+                        },
+                    ],
+                    "margin": "md",
+                },
+            ])
+        
+        # Overall status
+        overall_emoji = "🟢" if all_healthy else "🔴"
+        overall_text = "ระบบทำงานปกติ" if all_healthy else "ตรวจพบปัญหา"
+        overall_color = "#10B981" if all_healthy else "#EF4444"
+        
+        return {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "🔧 สถานะระบบ",
+                        "weight": "bold",
+                        "size": "lg",
+                        "color": "#FFFFFF",
+                    }
+                ],
+                "backgroundColor": "#1F2937",
+                "paddingAll": "15px",
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": overall_emoji,
+                                "size": "xl",
+                                "flex": 0,
+                            },
+                            {
+                                "type": "text",
+                                "text": overall_text,
+                                "size": "md",
+                                "weight": "bold",
+                                "color": overall_color,
+                                "margin": "md",
+                            },
+                        ],
+                        "margin": "none",
+                    },
+                    {"type": "separator", "margin": "lg"},
+                    {
+                        "type": "text",
+                        "text": "บริการ",
+                        "size": "sm",
+                        "color": "#666666",
+                        "weight": "bold",
+                        "margin": "lg",
+                    },
+                ] + service_items,
+                "paddingAll": "15px",
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"Tests: {passed}/{total_tests} passed",
+                        "size": "xs",
+                        "color": "#888888",
+                        "align": "center",
+                    },
+                    {
+                        "type": "text",
+                        "text": f"Last checked: {timestamp.strftime('%Y-%m-%d %H:%M')}",
+                        "size": "xs",
+                        "color": "#888888",
+                        "align": "center",
+                        "margin": "xs",
+                    },
+                ],
+                "paddingAll": "10px",
+            },
+        }

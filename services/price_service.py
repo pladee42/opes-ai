@@ -117,10 +117,10 @@ class PriceService:
             datetime.now() - self._thb_rate_timestamp < timedelta(minutes=5)):
             return self._thb_rate_cache
         
-        # Use frankfurter.app (free, no API key needed)
+        # Try frankfurter.app (free)
         try:
             url = "https://api.frankfurter.app/latest?from=USD&to=THB"
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 rate = data.get("rates", {}).get("THB")
@@ -129,9 +129,23 @@ class PriceService:
                     self._thb_rate_timestamp = datetime.now()
                     return self._thb_rate_cache
         except Exception as e:
-            raise PriceError(f"ไม่สามารถดึงอัตราแลกเปลี่ยน USD/THB ได้: {e}")
+            print(f"Frankfurter API error: {e}")
+            
+        # Fallback: open.er-api.com (free)
+        try:
+            url = "https://open.er-api.com/v6/latest/USD"
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                rate = data.get("rates", {}).get("THB")
+                if rate:
+                    self._thb_rate_cache = rate
+                    self._thb_rate_timestamp = datetime.now()
+                    return self._thb_rate_cache
+        except Exception as e:
+            print(f"Open Exchange Rates API error: {e}")
         
-        raise PriceError("ไม่สามารถดึงอัตราแลกเปลี่ยน USD/THB ได้")
+        raise PriceError("ไม่สามารถดึงอัตราแลกเปลี่ยน USD/THB ได้จากทุกแหล่งข้อมูล")
 
     def get_price_usd(self, ticker: str) -> Optional[float]:
         """Get price in USD for any asset type."""

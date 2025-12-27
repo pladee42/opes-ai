@@ -30,7 +30,7 @@ class MessageHandler:
 
         # Check for commands
         if self._is_command(text, "help"):
-            self._reply_help(reply_token)
+            self._reply_help(reply_token, user_id)
         elif self._is_command(text, "status"):
             self._reply_status(reply_token, user_id)
         elif self._is_command(text, "plan"):
@@ -50,23 +50,35 @@ class MessageHandler:
         keywords = self.COMMANDS.get(command, [])
         return any(kw in text for kw in keywords)
 
-    def _reply_help(self, reply_token: str) -> None:
-        """Reply with help information."""
-        help_text = """📚 **วิธีใช้ Family Wealth AI**
+    def _reply_help(self, reply_token: str, user_id: str) -> None:
+        """Reply with service status (health check)."""
+        from utils.test_runner import run_all_tests
+        from services.line_service import line_service as ls
+        
+        # Send initial message
+        line_service.reply_text(reply_token, "🔍 กำลังตรวจสอบสถานะระบบ...")
+        
+        # Run tests
+        try:
+            result = run_all_tests()
+            
+            # Send status Flex Message
+            status_flex = FlexMessages.service_status(
+                services=result.services,
+                total_tests=result.total_tests,
+                passed=result.passed,
+                failed=result.failed,
+                timestamp=result.timestamp
+            )
+            
+            # Push message to user (since reply already sent)
+            ls.push_flex(user_id, "สถานะระบบ", status_flex)
+            
+        except Exception as e:
+            # Fallback to error message
+            error_msg = f"❌ ไม่สามารถตรวจสอบสถานะระบบได้\n\nError: {str(e)}"
+            ls.push_text(user_id, error_msg)
 
-📸 **บันทึกรายการ**
-ส่งรูปหน้าจอการซื้อขายจาก Dime! หรือ Binance มาได้เลย
-
-📊 **ดูสถานะ**
-พิมพ์ "สถานะ" หรือ "portfolio"
-
-📋 **แผนการซื้อ (เร็วๆนี้)**
-พิมพ์ "แผน" หรือ "dca"
-
-❓ **ความช่วยเหลือ**
-พิมพ์ "help" หรือ "ช่วยเหลือ"
-"""
-        line_service.reply_text(reply_token, help_text)
 
     def _reply_status(self, reply_token: str, user_id: str) -> None:
         """Reply with portfolio status using visual Flex Messages with P/L."""
