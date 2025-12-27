@@ -156,10 +156,8 @@ class MessageHandler:
             line_service.reply_flex(reply_token, "สถานะพอร์ตลงทุน", carousel)
             
         except PriceError as e:
-            line_service.reply_text(
-                reply_token,
-                f"❌ ไม่สามารถดึงข้อมูลราคาได้\n\n{str(e)}\n\nกรุณาลองใหม่อีกครั้ง",
-            )
+            # Throw exception for GCP Error Reporting
+            raise e
 
     def _reply_dca(self, reply_token: str, user_id: str) -> None:
         """Reply with Smart DCA plan using rebalance-by-buying logic."""
@@ -215,10 +213,8 @@ class MessageHandler:
             line_service.reply_text(reply_token, message)
             
         except PriceError as e:
-            line_service.reply_text(
-                reply_token,
-                f"❌ ไม่สามารถดึงข้อมูลราคาได้\n\n{str(e)}\n\nกรุณาลองใหม่อีกครั้ง",
-            )
+            # Throw exception for GCP Error Reporting
+            raise e
 
     def _reply_record_tip(self, reply_token: str) -> None:
         """Reply with tip to send image."""
@@ -297,10 +293,8 @@ class MessageHandler:
             line_service.reply_flex(reply_token, "รายงานกำไร/ขาดทุน", pl_flex)
             
         except PriceError as e:
-            line_service.reply_text(
-                reply_token,
-                f"❌ ไม่สามารถดึงข้อมูลราคาได้\n\n{str(e)}\n\nกรุณาลองใหม่อีกครั้ง",
-            )
+            # Throw exception for GCP Error Reporting
+            raise e
 
     def _reply_settings(self, reply_token: str) -> None:
         """Reply with budget selection."""
