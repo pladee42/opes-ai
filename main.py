@@ -115,6 +115,84 @@ def get_user_settings(user_id):
             "display_name": "",
         }
 
+
+@app.route("/api/rebalance-check", methods=["POST"])
+def rebalance_check():
+    """Scheduled endpoint for quarterly rebalance notifications.
+    
+    Triggered by Cloud Scheduler to check all users' portfolios
+    and send push notifications for those with significant drift.
+    """
+    from services.sheets_service import sheets_service
+    from services.price_service import price_service
+    from services.ai_insight_service import ai_insight_service
+    from utils.rebalance_calculator import calculate_rebalance_actions
+    from utils.flex_messages import FlexMessages
+    
+    # Get all users with target allocations
+    users = sheets_service.get_all_users_with_allocation()
+    
+    notifications_sent = 0
+    errors = []
+    
+    for user in users:
+        try:
+            user_id = user.get("user_id")
+            allocation = user.get("target_allocation", {})
+            
+            if not user_id or not allocation:
+                continue
+            
+            # Get holdings
+            holdings = sheets_service.get_holdings_value(user_id)
+            if not holdings:
+                continue
+            
+            # Get prices
+            tickers = list(holdings.keys())
+            current_prices = price_service.get_prices_thb(tickers)
+            usd_thb_rate = price_service.get_usd_thb_rate()
+            
+            # Calculate values
+            current_values = {}
+            quantities = {}
+            for asset, data in holdings.items():
+                qty = data["quantity"]
+                quantities[asset] = qty
+                if asset in current_prices:
+                    current_values[asset] = qty * current_prices[asset]
+            
+            # Calculate rebalance actions
+            result = calculate_rebalance_actions(
+                target_allocation=allocation,
+                current_values=current_values,
+                quantities=quantities,
+                prices=current_prices,
+                usd_thb_rate=usd_thb_rate,
+                threshold=5.0,
+            )
+            
+            # Only notify if there's drift
+            if result.get("total_drift_assets", 0) > 0:
+                # Get AI insight
+                ai_insight = ai_insight_service.get_rebalance_insight(result)
+                
+                # Send push notification
+                flex_content = FlexMessages.rebalance_report(result, usd_thb_rate, ai_insight)
+                line_service.push_flex(user_id, "📊 Quarterly Rebalance Alert", flex_content)
+                notifications_sent += 1
+                
+        except Exception as e:
+            errors.append(f"{user.get('user_id', 'unknown')}: {str(e)}")
+    
+    return {
+        "status": "ok",
+        "notifications_sent": notifications_sent,
+        "users_checked": len(users),
+        "errors": errors if errors else None,
+    }
+
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     """LINE webhook endpoint."""

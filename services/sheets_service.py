@@ -124,6 +124,24 @@ class SheetsService:
                 return True
         return False
 
+    def get_all_users_with_allocation(self) -> list:
+        """Get all users who have target allocations set."""
+        sheet = self.spreadsheet.worksheet("Users")
+        records = sheet.get_all_records()
+        
+        users_with_allocation = []
+        for record in records:
+            if record.get("target_allocation"):
+                try:
+                    record["target_allocation"] = json.loads(record["target_allocation"])
+                    if record["target_allocation"]:  # Non-empty allocation
+                        users_with_allocation.append(record)
+                except json.JSONDecodeError:
+                    pass
+        
+        return users_with_allocation
+
+
     def get_or_create_user(self, user_id: str, display_name: str) -> dict:
         """Get existing user or create a new one."""
         user = self.get_user(user_id)

@@ -406,8 +406,14 @@ class MessageHandler:
                 threshold=5.0,
             )
             
+            # Get AI insight if there are drift issues
+            ai_insight = None
+            if result.get("total_drift_assets", 0) > 0:
+                from services.ai_insight_service import ai_insight_service
+                ai_insight = ai_insight_service.get_rebalance_insight(result)
+            
             # Format and send rebalance report
-            flex_content = FlexMessages.rebalance_report(result, usd_thb_rate)
+            flex_content = FlexMessages.rebalance_report(result, usd_thb_rate, ai_insight)
             line_service.reply_flex(reply_token, "Rebalance Report", flex_content)
             
         except PriceError as e:

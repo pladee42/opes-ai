@@ -1006,7 +1006,7 @@ class FlexMessages:
         }
 
     @staticmethod
-    def rebalance_report(result: dict, usd_thb_rate: float) -> dict:
+    def rebalance_report(result: dict, usd_thb_rate: float, ai_insight: str = None) -> dict:
         """Create Rebalance Report Flex Message with actionable instructions."""
         
         if "error" in result:
@@ -1089,6 +1089,29 @@ class FlexMessages:
                     "margin": "sm",
                 })
         
+        # Build body contents
+        body_contents = [
+            {"type": "text", "text": header_text, "weight": "bold", "size": "md", "color": header_color},
+            {"type": "separator", "margin": "lg"},
+        ] + action_contents
+        
+        # Add AI insight section if available
+        if ai_insight:
+            body_contents.append({"type": "separator", "margin": "lg"})
+            body_contents.append({
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "💬 AI Analysis", "weight": "bold", "size": "sm", "color": "#6366F1"},
+                    {"type": "text", "text": ai_insight, "size": "xs", "color": "#374151", "wrap": True, "margin": "sm"},
+                ],
+                "margin": "lg",
+                "backgroundColor": "#F3F4F6",
+                "paddingAll": "10px",
+                "cornerRadius": "md",
+            })
+        
+        
         return {
             "type": "bubble",
             "size": "mega",
@@ -1104,10 +1127,7 @@ class FlexMessages:
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": header_text, "weight": "bold", "size": "md", "color": header_color},
-                    {"type": "separator", "margin": "lg"},
-                ] + action_contents,
+                "contents": body_contents,
                 "paddingAll": "15px",
             },
             "footer": {
@@ -1119,3 +1139,4 @@ class FlexMessages:
                 "paddingAll": "10px",
             },
         }
+
