@@ -933,3 +933,189 @@ class FlexMessages:
                 "paddingAll": "10px",
             },
         }
+
+    @staticmethod
+    def ai_features_menu() -> dict:
+        """Create AI Features Menu Flex Message with action buttons."""
+        return {
+            "type": "bubble",
+            "size": "kilo",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "🤖 AI Features",
+                        "weight": "bold",
+                        "size": "lg",
+                        "color": "#FFFFFF",
+                    }
+                ],
+                "backgroundColor": "#6366F1",
+                "paddingAll": "15px",
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "เลือกฟีเจอร์ AI ที่ต้องการใช้งาน",
+                        "size": "sm",
+                        "color": "#666666",
+                        "margin": "none",
+                    },
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "📊 Rebalance Analysis",
+                            "text": "#rebalance",
+                        },
+                        "style": "primary",
+                        "color": "#10B981",
+                        "margin": "lg",
+                        "height": "sm",
+                    },
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "🔍 Research Asset (เร็วๆนี้)",
+                            "text": "#research",
+                        },
+                        "style": "secondary",
+                        "margin": "md",
+                        "height": "sm",
+                    },
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "📈 Market Insights (เร็วๆนี้)",
+                            "text": "#insights",
+                        },
+                        "style": "secondary",
+                        "margin": "md",
+                        "height": "sm",
+                    },
+                ],
+                "paddingAll": "15px",
+            },
+        }
+
+    @staticmethod
+    def rebalance_report(result: dict, usd_thb_rate: float) -> dict:
+        """Create Rebalance Report Flex Message with actionable instructions."""
+        
+        if "error" in result:
+            return {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": f"❌ {result['error']}", "wrap": True}
+                    ],
+                },
+            }
+        
+        actions = result["actions"]
+        drift_count = result["total_drift_assets"]
+        
+        # Header status
+        if drift_count == 0:
+            header_text = "✅ พอร์ตสมดุลดี"
+            header_color = "#10B981"
+        else:
+            header_text = f"⚠️ พบการเบี่ยงเบน {drift_count} รายการ"
+            header_color = "#F59E0B"
+        
+        # Build action items
+        action_contents = []
+        
+        for action in actions:
+            if action["status"] == "balanced":
+                emoji = "⚪"
+                status_text = "✓ สมดุล"
+                color = "#6B7280"
+            elif action["status"] == "overweight":
+                emoji = "🔴"
+                status_text = f"เกิน +{action['drift']:.0f}%"
+                color = "#EF4444"
+            else:  # underweight
+                emoji = "🟢"
+                status_text = f"ต่ำ {action['drift']:.0f}%"
+                color = "#10B981"
+            
+            # Asset header
+            action_contents.append({
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {"type": "text", "text": f"{emoji} {action['asset']}", "weight": "bold", "size": "sm", "flex": 1},
+                    {"type": "text", "text": f"{action['current_pct']:.0f}% → {action['target_pct']:.0f}%", "size": "xs", "color": "#666666", "align": "end"},
+                ],
+                "margin": "lg",
+            })
+            
+            # Action instruction (only if not balanced)
+            if action["status"] != "balanced" and action["qty_to_trade"] > 0:
+                action_type = "ขาย" if action["action_type"] == "sell" else "ซื้อเพิ่ม"
+                
+                # Format quantity based on asset type
+                if action["asset"] in ["BTC", "ETH", "SOL"]:
+                    qty_text = f"{action['qty_to_trade']:.6f}"
+                else:
+                    qty_text = f"{action['qty_to_trade']:.2f}"
+                
+                thb_amount = action["value_thb"]
+                usd_amount = action["value_usd"]
+                
+                action_contents.append({
+                    "type": "text",
+                    "text": f"   📌 {action_type}: {qty_text} (~฿{thb_amount:,.0f} / ${usd_amount:,.0f})",
+                    "size": "xs",
+                    "color": color,
+                    "margin": "sm",
+                })
+            elif action["status"] == "balanced":
+                action_contents.append({
+                    "type": "text",
+                    "text": f"   {status_text}",
+                    "size": "xs",
+                    "color": color,
+                    "margin": "sm",
+                })
+        
+        return {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "📊 Rebalance Report", "weight": "bold", "size": "lg", "color": "#FFFFFF"}
+                ],
+                "backgroundColor": "#1F2937",
+                "paddingAll": "15px",
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": header_text, "weight": "bold", "size": "md", "color": header_color},
+                    {"type": "separator", "margin": "lg"},
+                ] + action_contents,
+                "paddingAll": "15px",
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": f"Threshold: ±{result['threshold']:.0f}%", "size": "xs", "color": "#888888", "align": "center"},
+                ],
+                "paddingAll": "10px",
+            },
+        }

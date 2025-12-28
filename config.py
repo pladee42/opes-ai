@@ -24,7 +24,7 @@ class Config:
 
     # Gemini Models
     GEMINI_OCR_MODEL = os.getenv("GEMINI_OCR_MODEL", "gemini-3-flash-preview")
-    GEMINI_RESEARCH_MODEL = os.getenv("GEMINI_RESEARCH_MODEL", "gemini-3-pro-preview")
+    GEMINI_RESEARCH_MODEL = os.getenv("GEMINI_RESEARCH_MODEL", "gemini-3-flash-preview")
 
     # LIFF
     LIFF_URL = os.getenv("LIFF_URL", "https://liff.line.me/YOUR_LIFF_ID")

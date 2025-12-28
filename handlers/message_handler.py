@@ -16,6 +16,8 @@ class MessageHandler:
         "record": ["#record"],
         "report": ["#report", "report"],
         "settings": ["#settings", "settings", "ตั้งค่า", "budget", "งบ"],
+        "ai": ["#ai", "ai"],
+        "rebalance": ["#rebalance", "rebalance"],
     }
 
     def handle(self, event) -> None:
@@ -41,6 +43,10 @@ class MessageHandler:
             self._reply_report(reply_token, user_id)
         elif self._is_command(text, "settings"):
             self._reply_settings(reply_token)
+        elif self._is_command(text, "ai"):
+            self._reply_ai_menu(reply_token)
+        elif self._is_command(text, "rebalance"):
+            self._reply_rebalance(reply_token, user_id)
         else:
             # Default: greet and explain
             self._reply_default(reply_token, user_id)
@@ -344,6 +350,70 @@ class MessageHandler:
                 "👋 สวัสดี!\n\n📸 ส่งรูปหน้าจอการซื้อขายมาได้เลย\n\nหรือพิมพ์ 'help' เพื่อดูคำสั่งทั้งหมด",
             )
 
+    def _reply_ai_menu(self, reply_token: str) -> None:
+        """Reply with AI Features menu."""
+        flex_content = FlexMessages.ai_features_menu()
+        line_service.reply_flex(reply_token, "AI Features", flex_content)
+
+    def _reply_rebalance(self, reply_token: str, user_id: str) -> None:
+        """Reply with AI-powered rebalance analysis."""
+        from services.price_service import price_service, PriceError
+        from utils.rebalance_calculator import calculate_rebalance_actions
+        
+        user = sheets_service.get_user(user_id)
+        
+        if not user or not user.get("target_allocation"):
+            line_service.reply_text(
+                reply_token,
+                "📋 ยังไม่ได้ตั้งค่าแผนลงทุน\n\nพิมพ์ #settings เพื่อตั้งค่างบและแผน",
+            )
+            return
+        
+        allocation = user.get("target_allocation", {})
+        
+        try:
+            # Get current holdings
+            holdings = sheets_service.get_holdings_value(user_id)
+            
+            if not holdings:
+                line_service.reply_text(
+                    reply_token,
+                    "📊 ยังไม่มีข้อมูลพอร์ต\n\nส่งรูปหน้าจอการซื้อขายมาเพื่อบันทึกรายการ",
+                )
+                return
+            
+            # Get real-time prices
+            tickers = list(holdings.keys())
+            current_prices = price_service.get_prices_thb(tickers)
+            usd_thb_rate = price_service.get_usd_thb_rate()
+            
+            # Calculate market values
+            current_values = {}
+            quantities = {}
+            for asset, data in holdings.items():
+                qty = data["quantity"]
+                quantities[asset] = qty
+                if asset in current_prices:
+                    current_values[asset] = qty * current_prices[asset]
+            
+            # Calculate rebalance actions
+            result = calculate_rebalance_actions(
+                target_allocation=allocation,
+                current_values=current_values,
+                quantities=quantities,
+                prices=current_prices,
+                usd_thb_rate=usd_thb_rate,
+                threshold=5.0,
+            )
+            
+            # Format and send rebalance report
+            flex_content = FlexMessages.rebalance_report(result, usd_thb_rate)
+            line_service.reply_flex(reply_token, "Rebalance Report", flex_content)
+            
+        except PriceError as e:
+            raise e
+
 
 # Singleton instance
 message_handler = MessageHandler()
+
