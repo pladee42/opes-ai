@@ -323,6 +323,64 @@
             box-shadow: var(--focus-ring);
         }
         
+        /* ===== ACTION BUTTONS ===== */
+        .action-buttons {
+            display: flex;
+            gap: var(--space-3);
+            margin-top: var(--space-3);
+        }
+        
+        .action-buttons .add-btn,
+        .action-buttons .distribute-btn {
+            flex: 1;
+            padding: var(--space-3) var(--space-4);
+            font-size: var(--font-base);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-2);
+            font-weight: 500;
+            box-sizing: border-box;
+        }
+        
+        .action-buttons .add-btn {
+            background: transparent;
+            border: 1px dashed rgba(212, 175, 55, 0.4);
+            color: var(--gold);
+            width: auto;
+            margin-top: 0;
+        }
+        
+        .action-buttons .add-btn:hover {
+            background: var(--gold-muted);
+            border-color: var(--gold);
+        }
+        
+        .action-buttons .distribute-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--divider);
+            color: var(--text-secondary);
+        }
+        
+        .action-buttons .distribute-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--muted);
+        }
+        
+        .action-buttons .distribute-btn:active,
+        .action-buttons .add-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .action-buttons .distribute-btn:focus,
+        .action-buttons .add-btn:focus {
+            outline: none;
+            box-shadow: var(--focus-ring);
+        }
+        
         /* ===== FOOTER ===== */
         .footer {
             position: fixed;
