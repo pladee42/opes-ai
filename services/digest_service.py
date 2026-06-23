@@ -181,8 +181,19 @@ class DigestService:
         )
 
         logger.info(f"Calling Gemini for {ticker} narrative summary...")
-        response_text = gemini_service.generate_response(prompt, use_research_model=False)
-        return response_text.strip()
+        response_text = gemini_service.generate_response(prompt, use_research_model=True)
+        
+        # Clean markdown formatting so that it displays as beautiful plain text on LINE
+        import re
+        clean_text = response_text.strip()
+        # Remove bold markdown asterisks (e.g. **text**)
+        clean_text = clean_text.replace("**", "")
+        # Remove bullet markers (e.g. * or - at start of lines)
+        clean_text = re.sub(r"^\s*[\*\-]\s*", "", clean_text, flags=re.MULTILINE)
+        # Remove header markers (e.g. ### or # at start of lines)
+        clean_text = re.sub(r"^\s*#+\s*", "", clean_text, flags=re.MULTILINE)
+        
+        return clean_text.strip()
 
 
 # Singleton instance
