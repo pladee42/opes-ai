@@ -147,6 +147,12 @@ class SheetsService:
                 missing_headers = [h for h in required_headers if h not in headers and h in updates]
                 
                 if missing_headers:
+                    # Expand grid columns if needed
+                    current_col_count = sheet.col_count
+                    required_col_count = len(headers) + len(missing_headers)
+                    if required_col_count > current_col_count:
+                        sheet.add_cols(required_col_count - current_col_count)
+
                     for header in missing_headers:
                         col_num = len(headers) + 1
                         sheet.update_cell(1, col_num, header)

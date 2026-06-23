@@ -982,7 +982,7 @@ class FlexMessages:
                         "type": "button",
                         "action": {
                             "type": "message",
-                            "label": "🔬 Technical Digest (Now)",
+                            "label": "🔬 Technical Digest",
                             "text": "#digest",
                         },
                         "style": "primary",
