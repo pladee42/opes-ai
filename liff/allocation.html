@@ -549,7 +549,10 @@
             
             <div class="allocation-list" id="allocationList"></div>
             
-            <button class="add-btn" onclick="addItem()">+ เพิ่ม Ticker</button>
+            <div class="action-buttons">
+                <button class="add-btn" onclick="addItem()">+ เพิ่ม Ticker</button>
+                <button class="distribute-btn" id="distributeBtn" onclick="distributeEqual()">⚖️ แบ่งสัดส่วนเท่ากัน</button>
+            </div>
 
             <!-- Technical Digest Section -->
             <div class="digest-section" style="background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius-lg); padding: var(--space-4); margin-top: var(--space-6);">
@@ -787,7 +790,8 @@
         }
         
         function updateTotal() {
-            const total = allocations.reduce((sum, a) => sum + (a.weight || 0), 0);
+            const sum = allocations.reduce((sum, a) => sum + (a.weight || 0), 0);
+            const total = Math.round(sum * 100) / 100;
             const totalEl = document.getElementById('totalPercent');
             const saveBtn = document.getElementById('saveBtn');
             
@@ -800,6 +804,21 @@
                 totalEl.className = 'value invalid';
                 saveBtn.disabled = true;
             }
+        }
+        
+        function distributeEqual() {
+            const count = allocations.length;
+            if (count === 0) return;
+            
+            const baseWeight = Math.floor(10000 / count) / 100;
+            const remainderCents = Math.round((100 - (baseWeight * count)) * 100);
+            
+            allocations.forEach((item, index) => {
+                const extra = index < remainderCents ? 0.01 : 0;
+                item.weight = parseFloat((baseWeight + extra).toFixed(2));
+            });
+            
+            renderList();
         }
         
         function showError(message) {
