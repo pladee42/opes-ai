@@ -51,6 +51,43 @@ class SheetsService:
 
     # ==================== USERS ====================
 
+    def _parse_user_record(self, record: dict) -> dict:
+        """Parse raw user record fields from Google Sheet, providing sensible defaults."""
+        # Parse target_allocation
+        if record.get("target_allocation"):
+            try:
+                record["target_allocation"] = json.loads(record["target_allocation"])
+            except json.JSONDecodeError:
+                record["target_allocation"] = {}
+        else:
+            record["target_allocation"] = {}
+
+        # Parse digest fields
+        if "digest_enabled" in record:
+            val = record["digest_enabled"]
+            record["digest_enabled"] = str(val).upper() == "TRUE" or val is True
+        else:
+            record["digest_enabled"] = False
+
+        if record.get("digest_assets"):
+            try:
+                record["digest_assets"] = json.loads(record["digest_assets"])
+            except json.JSONDecodeError:
+                record["digest_assets"] = []
+        else:
+            record["digest_assets"] = []
+
+        if "digest_frequency" not in record or not record.get("digest_frequency"):
+            record["digest_frequency"] = "daily"
+        
+        if "digest_time" not in record or not record.get("digest_time"):
+            record["digest_time"] = "07"
+            
+        if "digest_day" not in record or not record.get("digest_day"):
+            record["digest_day"] = "monday"
+            
+        return record
+
     def get_user(self, user_id: str) -> Optional[dict]:
         """Get a user by their LINE user ID."""
         sheet = self.spreadsheet.worksheet("Users")
@@ -58,15 +95,7 @@ class SheetsService:
 
         for record in records:
             if record.get("user_id") == user_id:
-                # Parse JSON fields
-                if record.get("target_allocation"):
-                    try:
-                        record["target_allocation"] = json.loads(
-                            record["target_allocation"]
-                        )
-                    except json.JSONDecodeError:
-                        record["target_allocation"] = {}
-                return record
+                return self._parse_user_record(record)
         return None
 
     def create_user(
@@ -99,7 +128,7 @@ class SheetsService:
 
         # Return with parsed allocation
         user_data["target_allocation"] = target_allocation
-        return user_data
+        return self._parse_user_record(user_data)
 
     def update_user(self, user_id: str, updates: dict) -> bool:
         """Update a user's profile."""
@@ -113,11 +142,23 @@ class SheetsService:
                 # Get column indices
                 headers = sheet.row_values(1)
 
+                # Ensure all update keys exist as headers in the sheet
+                required_headers = ["digest_enabled", "digest_assets", "digest_frequency", "digest_time", "digest_day"]
+                missing_headers = [h for h in required_headers if h not in headers and h in updates]
+                
+                if missing_headers:
+                    for header in missing_headers:
+                        col_num = len(headers) + 1
+                        sheet.update_cell(1, col_num, header)
+                        headers.append(header)
+
                 for key, value in updates.items():
                     if key in headers:
                         col_num = headers.index(key) + 1
                         # Serialize JSON fields
                         if key == "target_allocation" and isinstance(value, dict):
+                            value = json.dumps(value)
+                        elif key == "digest_assets" and isinstance(value, list):
                             value = json.dumps(value)
                         sheet.update_cell(row_num, col_num, value)
 
@@ -131,16 +172,24 @@ class SheetsService:
         
         users_with_allocation = []
         for record in records:
-            if record.get("target_allocation"):
-                try:
-                    record["target_allocation"] = json.loads(record["target_allocation"])
-                    if record["target_allocation"]:  # Non-empty allocation
-                        users_with_allocation.append(record)
-                except json.JSONDecodeError:
-                    pass
+            parsed = self._parse_user_record(record)
+            if parsed.get("target_allocation"):  # Non-empty allocation
+                users_with_allocation.append(parsed)
         
         return users_with_allocation
 
+    def get_users_for_digest(self) -> list:
+        """Get all users with digest enabled."""
+        sheet = self.spreadsheet.worksheet("Users")
+        records = sheet.get_all_records()
+        
+        digest_users = []
+        for record in records:
+            parsed = self._parse_user_record(record)
+            if parsed.get("digest_enabled"):
+                digest_users.append(parsed)
+        
+        return digest_users
 
     def get_or_create_user(self, user_id: str, display_name: str) -> dict:
         """Get existing user or create a new one."""

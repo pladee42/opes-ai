@@ -8,7 +8,6 @@ from utils.flex_messages import FlexMessages
 class MessageHandler:
     """Handler for processing text messages."""
 
-    # Command keywords (includes Rich Menu # commands)
     COMMANDS = {
         "help": ["help", "ช่วยเหลือ", "วิธีใช้", "?", "#help"],
         "status": ["status", "สถานะ", "portfolio", "พอร์ต", "#status"],
@@ -18,6 +17,7 @@ class MessageHandler:
         "settings": ["#settings", "settings", "ตั้งค่า", "budget", "งบ"],
         "ai": ["#ai", "ai"],
         "rebalance": ["#rebalance", "rebalance"],
+        "digest": ["#digest", "digest", "วิเคราะห์", "technical"],
     }
 
     def handle(self, event) -> None:
@@ -47,6 +47,8 @@ class MessageHandler:
             self._reply_ai_menu(reply_token)
         elif self._is_command(text, "rebalance"):
             self._reply_rebalance(reply_token, user_id)
+        elif self._is_command(text, "digest"):
+            self._reply_digest(reply_token, user_id)
         else:
             # Default: greet and explain
             self._reply_default(reply_token, user_id)
@@ -418,6 +420,33 @@ class MessageHandler:
             
         except PriceError as e:
             raise e
+
+    def _reply_digest(self, reply_token: str, user_id: str) -> None:
+        """Reply with on-demand technical analysis digest."""
+        from services.digest_service import digest_service
+        from services.sheets_service import sheets_service
+        from config import Config
+        
+        # 1. Inform the user we are analyzing
+        line_service.reply_text(reply_token, "🔍 กำลังวิเคราะห์ข้อมูลทางเทคนิคและสรุปรายงานอัจฉริยะสำหรับคุณ...")
+        
+        try:
+            # 2. Generate digest results
+            results = digest_service.generate_digest(user_id)
+            
+            if not results:
+                # Prompt user to set up digest assets via LIFF
+                flex_content = FlexMessages.digest_no_assets()
+                line_service.push_flex(user_id, "📡 ตั้งค่ารายงานวิเคราะห์", flex_content)
+                return
+                
+            # 3. Format and send Flex carousel
+            flex_carousel = FlexMessages.digest_report_carousel(results)
+            line_service.push_flex(user_id, "📡 รายงานวิเคราะห์เทคนิค", flex_carousel)
+            
+        except Exception as e:
+            error_msg = f"❌ เกิดข้อผิดพลาดในการสร้างรายงานวิเคราะห์เทคนิค\n\nError: {str(e)}"
+            line_service.push_text(user_id, error_msg)
 
 
 # Singleton instance

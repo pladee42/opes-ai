@@ -40,7 +40,7 @@ def health_check():
 
 @app.route("/api/allocation", methods=["POST", "OPTIONS"])
 def save_allocation():
-    """API endpoint for LIFF to save user allocation."""
+    """API endpoint for LIFF to save user allocation and digest settings."""
     # Handle preflight request
     if request.method == "OPTIONS":
         response = app.make_default_options_response()
@@ -69,8 +69,20 @@ def save_allocation():
     # Include budget if provided
     if monthly_budget:
         update_data["monthly_budget"] = int(monthly_budget)
+
+    # Check for optional digest settings in payload
+    if "digest_enabled" in data:
+        update_data["digest_enabled"] = data["digest_enabled"]
+    if "digest_assets" in data:
+        update_data["digest_assets"] = data["digest_assets"]
+    if "digest_frequency" in data:
+        update_data["digest_frequency"] = data["digest_frequency"]
+    if "digest_time" in data:
+        update_data["digest_time"] = data["digest_time"]
+    if "digest_day" in data:
+        update_data["digest_day"] = data["digest_day"]
     
-    # Update user's allocation
+    # Update user's profile
     success = sheets_service.update_user(user_id, update_data)
     
     if success:
@@ -83,14 +95,14 @@ def save_allocation():
         message = f"✅ บันทึกแผนลงทุนเรียบร้อย!\n\n{budget_text}📊 สัดส่วน:\n{allocation_text}\n\n💡 พิมพ์ #dca เพื่อดูแผนซื้อ"
         line_service.push_text(user_id, message)
         
-        return {"status": "ok", "message": "Allocation saved", "normalized": normalized_allocation}
+        return {"status": "ok", "message": "Allocation and digest settings saved", "normalized": normalized_allocation}
     else:
         return {"error": "User not found"}, 404
 
 
 @app.route("/api/user/<user_id>", methods=["GET", "OPTIONS"])
 def get_user_settings(user_id):
-    """API endpoint for LIFF to get user settings."""
+    """API endpoint for LIFF to get user settings including digest preferences."""
     if request.method == "OPTIONS":
         response = app.make_default_options_response()
         return response
@@ -105,6 +117,11 @@ def get_user_settings(user_id):
             "monthly_budget": user.get("monthly_budget", 10000),
             "target_allocation": user.get("target_allocation", {}),
             "display_name": user.get("display_name", ""),
+            "digest_enabled": user.get("digest_enabled", False),
+            "digest_assets": user.get("digest_assets", []),
+            "digest_frequency": user.get("digest_frequency", "daily"),
+            "digest_time": user.get("digest_time", "07"),
+            "digest_day": user.get("digest_day", "monday"),
         }
     else:
         # New user - return defaults
@@ -113,6 +130,11 @@ def get_user_settings(user_id):
             "monthly_budget": None,
             "target_allocation": {},
             "display_name": "",
+            "digest_enabled": False,
+            "digest_assets": [],
+            "digest_frequency": "daily",
+            "digest_time": "07",
+            "digest_day": "monday",
         }
 
 
@@ -190,6 +212,45 @@ def rebalance_check():
         "notifications_sent": notifications_sent,
         "users_checked": len(users),
         "errors": errors if errors else None,
+    }
+
+
+@app.route("/api/digest-push", methods=["POST"])
+def digest_push():
+    """Scheduled endpoint for technical analysis digest push.
+    
+    Triggered hourly by Cloud Scheduler. Checks each user's
+    preferred schedule and sends digests to matching users.
+    """
+    from services.sheets_service import sheets_service
+    from services.digest_service import digest_service
+    from services.line_service import line_service
+    from utils.flex_messages import FlexMessages
+    
+    users = sheets_service.get_users_for_digest()
+    sent = 0
+    errors = []
+    
+    for user in users:
+        try:
+            user_id = user.get("user_id")
+            if not user_id:
+                continue
+                
+            if digest_service.should_send_now(user):
+                results = digest_service.generate_digest(user_id)
+                if results:
+                    flex_carousel = FlexMessages.digest_report_carousel(results)
+                    line_service.push_flex(user_id, "📡 รายงานวิเคราะห์เทคนิค", flex_carousel)
+                    sent += 1
+        except Exception as e:
+            errors.append(f"{user.get('user_id', 'unknown')}: {str(e)}")
+            
+    return {
+        "status": "ok",
+        "sent": sent,
+        "users_checked": len(users),
+        "errors": errors if errors else None
     }
 
 

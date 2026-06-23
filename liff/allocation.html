@@ -387,6 +387,81 @@
             margin-bottom: var(--space-4);
             font-size: var(--font-sm);
         }
+
+        /* ===== SWITCH STYLE ===== */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--surface-3);
+            transition: .4s;
+            border-radius: 34px;
+            border: 1px solid var(--divider);
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--muted);
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--gold-muted);
+            border-color: var(--gold);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(24px);
+            background-color: var(--gold);
+        }
+
+        /* ===== CHECKBOX LIST STYLE ===== */
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--surface-2);
+            border: 1px solid var(--divider);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: var(--font-sm);
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        
+        .checkbox-item:hover {
+            background: var(--surface-3);
+            border-color: rgba(212, 175, 55, 0.3);
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            accent-color: var(--gold);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -417,6 +492,79 @@
             <div class="allocation-list" id="allocationList"></div>
             
             <button class="add-btn" onclick="addItem()">+ เพิ่ม Ticker</button>
+
+            <!-- Technical Digest Section -->
+            <div class="digest-section" style="background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius-lg); padding: var(--space-4); margin-top: var(--space-6);">
+                <h2 style="font-size: var(--font-base); font-weight: 600; color: var(--gold); border-bottom: 1px solid var(--divider); padding-bottom: var(--space-2); margin-bottom: var(--space-4);">📡 Technical Digest</h2>
+                
+                <div class="digest-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+                    <span style="font-size: var(--font-sm); color: var(--text-secondary);">เปิดรับรายงานวิเคราะห์เทคนิค</span>
+                    <label class="switch">
+                        <input type="checkbox" id="digestEnabled" onchange="toggleDigestFields()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div id="digestFields" style="display: none;">
+                    <div style="margin-bottom: var(--space-4);">
+                        <label style="display: block; font-size: var(--font-sm); color: var(--muted); margin-bottom: var(--space-2);">📊 สินทรัพย์ที่ต้องการติดตาม</label>
+                        <div id="digestAssetsContainer" style="display: flex; flex-direction: column; gap: var(--space-2);">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: var(--space-4);">
+                        <label style="display: block; font-size: var(--font-sm); color: var(--muted); margin-bottom: var(--space-2);">⏰ ความถี่การส่งรายงาน</label>
+                        <div style="display: flex; gap: var(--space-4);">
+                            <label style="display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-sm); cursor: pointer;">
+                                <input type="radio" name="frequency" value="daily" checked onchange="updateFrequencyFields()" style="accent-color: var(--gold);"> ทุกวัน
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-sm); cursor: pointer;">
+                                <input type="radio" name="frequency" value="weekly" onchange="updateFrequencyFields()" style="accent-color: var(--gold);"> ทุกสัปดาห์
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-sm); cursor: pointer;">
+                                <input type="radio" name="frequency" value="monthly" onchange="updateFrequencyFields()" style="accent-color: var(--gold);"> ทุกเดือน
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="weeklyDayField" style="display: none; margin-bottom: var(--space-4);">
+                        <label style="display: block; font-size: var(--font-sm); color: var(--muted); margin-bottom: var(--space-2);">📅 วันที่ส่งรายงาน (รายสัปดาห์)</label>
+                        <select id="digestDay" style="width: 100%; background: var(--surface-2); border: 1px solid var(--divider); border-radius: var(--radius-sm); padding: var(--space-3); font-size: var(--font-sm); color: var(--text); outline: none; cursor: pointer;">
+                            <option value="monday">วันจันทร์ (Monday)</option>
+                            <option value="tuesday">วันอังคาร (Tuesday)</option>
+                            <option value="wednesday">วันพุธ (Wednesday)</option>
+                            <option value="thursday">วันพฤหัสบดี (Thursday)</option>
+                            <option value="friday">วันศุกร์ (Friday)</option>
+                            <option value="saturday">วันเสาร์ (Saturday)</option>
+                            <option value="sunday">วันอาทิตย์ (Sunday)</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: var(--space-4);">
+                        <label style="display: block; font-size: var(--font-sm); color: var(--muted); margin-bottom: var(--space-2);">🕐 เวลาที่ส่งรายงาน (ICT)</label>
+                        <select id="digestTime" style="width: 100%; background: var(--surface-2); border: 1px solid var(--divider); border-radius: var(--radius-sm); padding: var(--space-3); font-size: var(--font-sm); color: var(--text); outline: none; cursor: pointer;">
+                            <option value="06">06:00</option>
+                            <option value="07" selected>07:00</option>
+                            <option value="08">08:00</option>
+                            <option value="09">09:00</option>
+                            <option value="10">10:00</option>
+                            <option value="11">11:00</option>
+                            <option value="12">12:00</option>
+                            <option value="13">13:00</option>
+                            <option value="14">14:00</option>
+                            <option value="15">15:00</option>
+                            <option value="16">16:00</option>
+                            <option value="17">17:00</option>
+                            <option value="18">18:00</option>
+                            <option value="19">19:00</option>
+                            <option value="20">20:00</option>
+                            <option value="21">21:00</option>
+                            <option value="22">22:00</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -436,6 +584,7 @@
         let userId = null;
         let allocations = [];
         let monthlyBudget = 10000;
+        let loadedDigestAssets = [];
         
         function formatBudgetInput(input) {
             // Remove non-digits
@@ -492,6 +641,7 @@
                 
                 // Set allocations
                 if (data.target_allocation && Object.keys(data.target_allocation).length > 0) {
+                    loadedDigestAssets = data.digest_assets || [];
                     // Load existing allocations
                     for (const [ticker, weight] of Object.entries(data.target_allocation)) {
                         const id = ++itemCounter;
@@ -504,6 +654,25 @@
                     addItem();
                     addItem();
                 }
+
+                // Set digest fields
+                if (data.digest_enabled !== undefined) {
+                    document.getElementById('digestEnabled').checked = data.digest_enabled;
+                }
+                if (data.digest_frequency) {
+                    const freqInput = document.querySelector(`input[name="frequency"][value="${data.digest_frequency}"]`);
+                    if (freqInput) freqInput.checked = true;
+                }
+                if (data.digest_time) {
+                    document.getElementById('digestTime').value = data.digest_time;
+                }
+                if (data.digest_day) {
+                    document.getElementById('digestDay').value = data.digest_day;
+                }
+                
+                updateDigestAssetsList(loadedDigestAssets);
+                toggleDigestFields();
+                updateFrequencyFields();
                 
             } catch (error) {
                 console.error('Failed to load settings:', error);
@@ -556,6 +725,7 @@
                 </div>
             `).join('');
             updateTotal();
+            updateDigestAssetsList();
         }
         
         function updateTotal() {
@@ -604,6 +774,11 @@
                         user_id: userId,
                         allocation: allocationMap,
                         monthly_budget: monthlyBudget,
+                        digest_enabled: document.getElementById('digestEnabled').checked,
+                        digest_assets: getSelectedDigestAssets(),
+                        digest_frequency: document.querySelector('input[name="frequency"]:checked').value,
+                        digest_time: document.getElementById('digestTime').value,
+                        digest_day: document.getElementById('digestDay').value,
                     }),
                 });
                 
@@ -620,6 +795,55 @@
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'บันทึกแผน';
             }
+        }
+        
+        /* ===== TECHNICAL DIGEST HELPERS ===== */
+        function toggleDigestFields() {
+            const enabled = document.getElementById('digestEnabled').checked;
+            document.getElementById('digestFields').style.display = enabled ? 'block' : 'none';
+        }
+        
+        function updateFrequencyFields() {
+            const freq = document.querySelector('input[name="frequency"]:checked').value;
+            document.getElementById('weeklyDayField').style.display = freq === 'weekly' ? 'block' : 'none';
+        }
+
+        function updateDigestAssetsList(savedAssets = null) {
+            const container = document.getElementById('digestAssetsContainer');
+            if (!container) return;
+            
+            const tickers = [...new Set(allocations.map(a => a.ticker.trim().toUpperCase()).filter(t => t))];
+            
+            if (tickers.length === 0) {
+                container.innerHTML = `<span style="color: var(--muted); font-size: var(--font-xs);">เพิ่ม Ticker ด้านบนเพื่อติดตาม</span>`;
+                return;
+            }
+            
+            let currentSelection = savedAssets;
+            if (!currentSelection) {
+                currentSelection = getSelectedDigestAssets();
+                if (currentSelection.length === 0 && loadedDigestAssets.length > 0) {
+                    currentSelection = loadedDigestAssets;
+                }
+            }
+            
+            // For new users with no selection and no loaded assets, default to check all
+            const isFirstLoad = !savedAssets && getSelectedDigestAssets().length === 0 && loadedDigestAssets.length === 0;
+            
+            container.innerHTML = tickers.map(ticker => {
+                const checked = isFirstLoad || (currentSelection && currentSelection.includes(ticker)) ? 'checked' : '';
+                return `
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="digestAsset" value="${ticker}" ${checked}>
+                        <span>${ticker}</span>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        function getSelectedDigestAssets() {
+            const checkedBoxes = document.querySelectorAll('input[name="digestAsset"]:checked');
+            return Array.from(checkedBoxes).map(cb => cb.value);
         }
         
         // Initialize on load

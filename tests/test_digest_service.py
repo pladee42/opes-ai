@@ -190,3 +190,75 @@ def test_generate_narrative(mock_gemini, mock_user_daily):
     assert "$91,200.00" in prompt_sent
     assert "$94,800.00" in prompt_sent
     assert "23.6%" in prompt_sent
+
+
+@patch("services.digest_service.sheets_service")
+@patch("services.digest_service.ta_service")
+@patch("services.digest_service.gemini_service")
+def test_generate_digest_success(mock_gemini, mock_ta, mock_sheets):
+    """Test full generate_digest pipeline for a user with multiple tracked assets."""
+    mock_sheets.get_user.return_value = {
+        "user_id": "U123456",
+        "display_name": "Test User",
+        "digest_enabled": True,
+        "digest_assets": '["GOLD", "BTC"]',
+        "target_allocation": {"GOLD": 50, "BTC": 50}
+    }
+    
+    mock_ta.compute_indicators.side_effect = lambda ticker: {
+        "metadata": {
+            "ticker": ticker.upper(),
+            "yfinance_symbol": ticker,
+            "current_price": 100.0 if ticker == "GOLD" else 92450.0,
+            "timestamp": "2026-06-23T07:00:00"
+        },
+        "metrics": {
+            "trend": {
+                "macro_condition": "BULLISH_EXPANSION",
+                "ema_50_price": 95.0,
+                "ema_200_price": 90.0,
+                "distance_from_50_ema_pct": 5.0,
+                "distance_from_200_ema_pct": 10.0
+            },
+            "momentum": {
+                "rsi_value": 60.0,
+                "rsi_condition": "NEUTRAL_HIGH",
+                "rsi_3d_velocity": 2.0,
+                "bearish_divergence_detected": False,
+                "bullish_divergence_detected": False
+            },
+            "volume_profile": {
+                "point_of_control_price": 90.0,
+                "immediate_support_hvn": 92.0,
+                "immediate_resistance_hvn": 98.0,
+                "liquidity_gap_below": {
+                    "detected": False,
+                    "start_price": 0.0,
+                    "end_price": 0.0
+                }
+            },
+            "fibonacci": {
+                "anchor_swing_low": 80.0,
+                "anchor_swing_high": 120.0,
+                "closest_level_ratio": "0.5",
+                "closest_level_price": 100.0,
+                "distance_to_level_pct": 0.0,
+                "golden_pocket_zone": {
+                    "fib_05_price": 100.0,
+                    "fib_0618_price": 95.0
+                }
+            }
+        }
+    }
+    
+    mock_gemini.generate_response.return_value = "Mock Thai analysis"
+    
+    service = DigestService()
+    results = service.generate_digest("U123456")
+    
+    assert len(results) == 2
+    assert results[0]["ticker"] == "GOLD"
+    assert results[1]["ticker"] == "BTC"
+    assert results[0]["narrative"] == "Mock Thai analysis"
+    assert results[1]["narrative"] == "Mock Thai analysis"
+

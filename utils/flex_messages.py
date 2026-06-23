@@ -982,6 +982,18 @@ class FlexMessages:
                         "type": "button",
                         "action": {
                             "type": "message",
+                            "label": "🔬 Technical Digest (Now)",
+                            "text": "#digest",
+                        },
+                        "style": "primary",
+                        "color": "#6366F1",
+                        "margin": "md",
+                        "height": "sm",
+                    },
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
                             "label": "🔍 Research Asset (เร็วๆนี้)",
                             "text": "#research",
                         },
@@ -1138,5 +1150,322 @@ class FlexMessages:
                 ],
                 "paddingAll": "10px",
             },
+        }
+
+    @staticmethod
+    def digest_no_assets() -> dict:
+        """Create a prompt to set up digest settings via LIFF."""
+        from config import Config
+        liff_url = Config.LIFF_URL
+        
+        return {
+            "type": "bubble",
+            "size": "kilo",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "📡 ตั้งค่ารายงานวิเคราะห์",
+                        "weight": "bold",
+                        "size": "lg",
+                        "color": "#333333",
+                    }
+                ],
+                "paddingAll": "15px",
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "คุณยังไม่ได้เลือกสินทรัพย์ที่จะติดตามรายงานวิเคราะห์ทางเทคนิค",
+                        "wrap": True,
+                        "color": "#666666",
+                        "size": "sm",
+                    },
+                    {
+                        "type": "text",
+                        "text": "• เปิดรับรายงานวิเคราะห์เทคนิค\n• เลือกสินทรัพย์ที่ต้องการ (เช่น GOLD, BTC)\n• กำหนดความถี่การส่ง (รายวัน, รายสัปดาห์, รายเดือน)",
+                        "wrap": True,
+                        "color": "#888888",
+                        "size": "xs",
+                        "margin": "md",
+                    },
+                ],
+                "paddingAll": "15px",
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "action": {
+                            "type": "uri",
+                            "label": "ตั้งค่ารายงานวิเคราะห์",
+                            "uri": liff_url,
+                        },
+                        "color": "#6366F1",
+                    }
+                ],
+                "paddingAll": "15px",
+            },
+        }
+
+    @staticmethod
+    def digest_report_carousel(results: list) -> dict:
+        """Create a carousel of technical analysis digest bubbles."""
+        bubbles = []
+        for res in results:
+            bubble = FlexMessages.digest_report_bubble(res["ticker"], res["indicators"], res["narrative"])
+            bubbles.append(bubble)
+        return {
+            "type": "carousel",
+            "contents": bubbles
+        }
+
+    @staticmethod
+    def digest_report_bubble(ticker: str, payload: dict, narrative: str) -> dict:
+        """Create a single technical analysis digest bubble."""
+        metadata = payload["metadata"]
+        metrics = payload["metrics"]
+        
+        trend = metrics["trend"]
+        momentum = metrics["momentum"]
+        vp = metrics["volume_profile"]
+        fib = metrics["fibonacci"]
+        
+        current_price = metadata["current_price"]
+        price_str = f"${current_price:,.2f}"
+        
+        # Determine theme color based on trend
+        macro = trend["macro_condition"]
+        if "BULLISH" in macro:
+            theme_color = "#10B981"  # Emerald
+            trend_label_th = "ขาขึ้น"
+        elif "BEARISH" in macro:
+            theme_color = "#EF4444"  # Red
+            trend_label_th = "ขาลง"
+        else:
+            theme_color = "#6B7280"  # Gray
+            trend_label_th = "เป็นกลาง"
+            
+        ticker_upper = ticker.upper()
+        if ticker_upper == "GOLD":
+            display_ticker = "GOLD (ทองคำ)"
+        elif ticker_upper in ["BTC", "ETH", "SOL", "XRP", "DOGE"]:
+            display_ticker = f"{ticker_upper}/USDT"
+        else:
+            display_ticker = ticker_upper
+            
+        # Formulate divergence flag
+        if momentum.get("bearish_divergence_detected"):
+            divergence_str = "Bearish Div ⚠️"
+            divergence_color = "#EF4444"
+        elif momentum.get("bullish_divergence_detected"):
+            divergence_str = "Bullish Div 🚀"
+            divergence_color = "#10B981"
+        else:
+            divergence_str = "ปกติ"
+            divergence_color = "#333333"
+
+        return {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": display_ticker,
+                                "weight": "bold",
+                                "size": "xl",
+                                "color": "#FFFFFF",
+                            },
+                            {
+                                "type": "text",
+                                "text": f"ราคา: {price_str}",
+                                "size": "sm",
+                                "color": "#E5E7EB",
+                                "margin": "xs",
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": trend_label_th,
+                                "weight": "bold",
+                                "size": "sm",
+                                "color": "#FFFFFF",
+                                "align": "center",
+                            }
+                        ],
+                        "backgroundColor": theme_color,
+                        "cornerRadius": "md",
+                        "paddingAll": "6px",
+                        "width": "65px",
+                        "height": "30px",
+                        "justifyContent": "center",
+                    }
+                ],
+                "backgroundColor": "#1F2937",
+                "paddingAll": "15px",
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "text", "text": "📈 Trend", "size": "sm", "color": "#4B5563", "weight": "bold", "flex": 3},
+                                    {"type": "text", "text": macro, "size": "sm", "color": theme_color, "weight": "bold", "align": "right", "flex": 7}
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "text", "text": "  EMA 50 / 200", "size": "xs", "color": "#6B7280", "flex": 4},
+                                    {
+                                        "type": "text", 
+                                        "text": f"{trend['distance_from_50_ema_pct']:+.1f}% / {trend['distance_from_200_ema_pct']:+.1f}%", 
+                                        "size": "xs", 
+                                        "color": "#374151", 
+                                        "align": "right", 
+                                        "flex": 6
+                                    }
+                                ],
+                                "margin": "xs"
+                            },
+                            {"type": "separator", "margin": "md"},
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "text", "text": "⚡ Momentum", "size": "sm", "color": "#4B5563", "weight": "bold", "flex": 4},
+                                    {"type": "text", "text": f"RSI: {momentum['rsi_value']:.1f}" if momentum['rsi_value'] is not None else "RSI: N/A", "size": "sm", "color": "#111827", "weight": "bold", "align": "right", "flex": 6}
+                                ],
+                                "margin": "md"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "text", "text": "  Divergence", "size": "xs", "color": "#6B7280", "flex": 4},
+                                    {"type": "text", "text": divergence_str, "size": "xs", "color": divergence_color, "weight": "bold", "align": "right", "flex": 6}
+                                ],
+                                "margin": "xs"
+                            },
+                            {"type": "separator", "margin": "md"},
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "text", "text": "🏗️ Vol Profile", "size": "sm", "color": "#4B5563", "weight": "bold", "flex": 4},
+                                    {"type": "text", "text": f"POC: ${vp['point_of_control_price']:,.0f}", "size": "sm", "color": "#374151", "align": "right", "flex": 6}
+                                ],
+                                "margin": "md"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "text", "text": "  Support / Resist", "size": "xs", "color": "#6B7280", "flex": 5},
+                                    {
+                                        "type": "text", 
+                                        "text": f"${vp['immediate_support_hvn']:,.0f} / ${vp['immediate_resistance_hvn']:,.0f}", 
+                                        "size": "xs", 
+                                        "color": "#374151", 
+                                        "align": "right", 
+                                        "flex": 5
+                                    }
+                                ],
+                                "margin": "xs"
+                            },
+                            {"type": "separator", "margin": "md"},
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "text", "text": "📐 Fibonacci", "size": "sm", "color": "#4B5563", "weight": "bold", "flex": 4},
+                                    {
+                                        "type": "text", 
+                                        "text": f"Closest: {float(fib['closest_level_ratio'])*100:.1f}%", 
+                                        "size": "sm", 
+                                        "color": "#374151", 
+                                        "align": "right", 
+                                        "flex": 6
+                                    }
+                                ],
+                                "margin": "md"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "text", "text": "  Level Price / Dist", "size": "xs", "color": "#6B7280", "flex": 5},
+                                    {
+                                        "type": "text", 
+                                        "text": f"${fib['closest_level_price']:,.0f} ({fib['distance_to_level_pct']:+.1f}%)", 
+                                        "size": "xs", 
+                                        "color": "#374151", 
+                                        "align": "right", 
+                                        "flex": 5
+                                    }
+                                ],
+                                "margin": "xs"
+                            }
+                        ]
+                    },
+                    {"type": "separator", "margin": "lg", "color": "#E5E7EB"},
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "💬 บทวิเคราะห์ AI",
+                                "weight": "bold",
+                                "size": "sm",
+                                "color": "#4F46E5",
+                                "margin": "md",
+                            },
+                            {
+                                "type": "text",
+                                "text": narrative,
+                                "wrap": True,
+                                "size": "xs",
+                                "color": "#4B5563",
+                                "margin": "sm",
+                                "lineSpacing": "4px",
+                            }
+                        ],
+                        "backgroundColor": "#F9FAFB",
+                        "paddingAll": "10px",
+                        "cornerRadius": "md",
+                        "margin": "md",
+                    }
+                ],
+                "paddingAll": "15px",
+            }
         }
 

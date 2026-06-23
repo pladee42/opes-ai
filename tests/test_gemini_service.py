@@ -14,6 +14,7 @@ class TestGeminiService:
         mock_response.text = json.dumps({
             "source_app": "Dime",
             "asset": "XAUUSD",
+            "asset_normalized": "XAUUSD",
             "side": "BUY",
             "amount": 0.5,
             "price": 2650,
@@ -23,9 +24,9 @@ class TestGeminiService:
         })
 
         with patch("services.gemini_service.genai") as mock_genai:
-            mock_model = MagicMock()
-            mock_model.generate_content.return_value = mock_response
-            mock_genai.GenerativeModel.return_value = mock_model
+            mock_client = MagicMock()
+            mock_client.models.generate_content.return_value = mock_response
+            mock_genai.Client.return_value = mock_client
 
             from services.gemini_service import GeminiService
             service = GeminiService()
@@ -33,7 +34,7 @@ class TestGeminiService:
 
             assert result is not None
             assert result["source_app"] == "Dime"
-            assert result["asset"] == "XAUUSD"
+            assert result["asset_normalized"] == "XAUUSD"
             assert result["side"] == "BUY"
             assert result["amount"] == 0.5
 
@@ -43,6 +44,7 @@ class TestGeminiService:
         mock_response.text = json.dumps({
             "source_app": "Binance",
             "asset": "BTC",
+            "asset_normalized": "BTC",
             "side": "BUY",
             "amount": 0.001,
             "price": 3500000,
@@ -52,9 +54,9 @@ class TestGeminiService:
         })
 
         with patch("services.gemini_service.genai") as mock_genai:
-            mock_model = MagicMock()
-            mock_model.generate_content.return_value = mock_response
-            mock_genai.GenerativeModel.return_value = mock_model
+            mock_client = MagicMock()
+            mock_client.models.generate_content.return_value = mock_response
+            mock_genai.Client.return_value = mock_client
 
             from services.gemini_service import GeminiService
             service = GeminiService()
@@ -62,7 +64,7 @@ class TestGeminiService:
 
             assert result is not None
             assert result["source_app"] == "Binance"
-            assert result["asset"] == "BTC"
+            assert result["asset_normalized"] == "BTC"
 
     def test_parse_transaction_invalid_json(self):
         """Test handling invalid JSON response."""
@@ -70,9 +72,9 @@ class TestGeminiService:
         mock_response.text = "This is not valid JSON"
 
         with patch("services.gemini_service.genai") as mock_genai:
-            mock_model = MagicMock()
-            mock_model.generate_content.return_value = mock_response
-            mock_genai.GenerativeModel.return_value = mock_model
+            mock_client = MagicMock()
+            mock_client.models.generate_content.return_value = mock_response
+            mock_genai.Client.return_value = mock_client
 
             from services.gemini_service import GeminiService
             service = GeminiService()
@@ -85,13 +87,13 @@ class TestGeminiService:
         mock_response = MagicMock()
         mock_response.text = json.dumps({
             "source_app": "Dime",
-            # Missing: asset, side, amount
+            # Missing: asset_normalized, side, amount
         })
 
         with patch("services.gemini_service.genai") as mock_genai:
-            mock_model = MagicMock()
-            mock_model.generate_content.return_value = mock_response
-            mock_genai.GenerativeModel.return_value = mock_model
+            mock_client = MagicMock()
+            mock_client.models.generate_content.return_value = mock_response
+            mock_genai.Client.return_value = mock_client
 
             from services.gemini_service import GeminiService
             service = GeminiService()
