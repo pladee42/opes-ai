@@ -15,6 +15,8 @@ google-auth>=2.0.0
 requests>=2.31.0
 python-dotenv>=1.0.0
 yfinance>=0.2.0
+pandas>=2.0.0
+pandas-ta>=0.3.14b
 
 # Production server
 gunicorn>=21.0.0
