@@ -1337,7 +1337,7 @@ class FlexMessages:
                                 "layout": "horizontal",
                                 "contents": [
                                     {"type": "text", "text": "📈 Trend", "size": "sm", "color": "#4B5563", "weight": "bold", "flex": 3},
-                                    {"type": "text", "text": macro, "size": "sm", "color": theme_color, "weight": "bold", "align": "right", "flex": 7}
+                                    {"type": "text", "text": macro, "size": "sm", "color": theme_color, "weight": "bold", "align": "end", "flex": 7}
                                 ]
                             },
                             {
@@ -1350,7 +1350,7 @@ class FlexMessages:
                                         "text": f"{trend['distance_from_50_ema_pct']:+.1f}% / {trend['distance_from_200_ema_pct']:+.1f}%", 
                                         "size": "xs", 
                                         "color": "#374151", 
-                                        "align": "right", 
+                                        "align": "end", 
                                         "flex": 6
                                     }
                                 ],
@@ -1362,7 +1362,7 @@ class FlexMessages:
                                 "layout": "horizontal",
                                 "contents": [
                                     {"type": "text", "text": "⚡ Momentum", "size": "sm", "color": "#4B5563", "weight": "bold", "flex": 4},
-                                    {"type": "text", "text": f"RSI: {momentum['rsi_value']:.1f}" if momentum['rsi_value'] is not None else "RSI: N/A", "size": "sm", "color": "#111827", "weight": "bold", "align": "right", "flex": 6}
+                                    {"type": "text", "text": f"RSI: {momentum['rsi_value']:.1f}" if momentum['rsi_value'] is not None else "RSI: N/A", "size": "sm", "color": "#111827", "weight": "bold", "align": "end", "flex": 6}
                                 ],
                                 "margin": "md"
                             },
@@ -1371,7 +1371,7 @@ class FlexMessages:
                                 "layout": "horizontal",
                                 "contents": [
                                     {"type": "text", "text": "  Divergence", "size": "xs", "color": "#6B7280", "flex": 4},
-                                    {"type": "text", "text": divergence_str, "size": "xs", "color": divergence_color, "weight": "bold", "align": "right", "flex": 6}
+                                    {"type": "text", "text": divergence_str, "size": "xs", "color": divergence_color, "weight": "bold", "align": "end", "flex": 6}
                                 ],
                                 "margin": "xs"
                             },
@@ -1381,7 +1381,7 @@ class FlexMessages:
                                 "layout": "horizontal",
                                 "contents": [
                                     {"type": "text", "text": "🏗️ Vol Profile", "size": "sm", "color": "#4B5563", "weight": "bold", "flex": 4},
-                                    {"type": "text", "text": f"POC: ${vp['point_of_control_price']:,.0f}", "size": "sm", "color": "#374151", "align": "right", "flex": 6}
+                                    {"type": "text", "text": f"POC: ${vp['point_of_control_price']:,.0f}", "size": "sm", "color": "#374151", "align": "end", "flex": 6}
                                 ],
                                 "margin": "md"
                             },
@@ -1395,7 +1395,7 @@ class FlexMessages:
                                         "text": f"${vp['immediate_support_hvn']:,.0f} / ${vp['immediate_resistance_hvn']:,.0f}", 
                                         "size": "xs", 
                                         "color": "#374151", 
-                                        "align": "right", 
+                                        "align": "end", 
                                         "flex": 5
                                     }
                                 ],
@@ -1412,7 +1412,7 @@ class FlexMessages:
                                         "text": f"Closest: {float(fib['closest_level_ratio'])*100:.1f}%", 
                                         "size": "sm", 
                                         "color": "#374151", 
-                                        "align": "right", 
+                                        "align": "end", 
                                         "flex": 6
                                     }
                                 ],
@@ -1428,7 +1428,7 @@ class FlexMessages:
                                         "text": f"${fib['closest_level_price']:,.0f} ({fib['distance_to_level_pct']:+.1f}%)", 
                                         "size": "xs", 
                                         "color": "#374151", 
-                                        "align": "right", 
+                                        "align": "end", 
                                         "flex": 5
                                     }
                                 ],

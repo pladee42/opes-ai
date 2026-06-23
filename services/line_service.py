@@ -96,6 +96,7 @@ class LineService:
             )
         except Exception as e:
             print(f"Error pushing message: {e}")
+            raise e
 
     def push_flex(self, user_id: str, alt_text: str, flex_content: dict) -> None:
         """Send a push Flex Message to a user."""
@@ -110,6 +111,7 @@ class LineService:
             )
         except Exception as e:
             print(f"Error pushing Flex message: {e}")
+            raise e
 
 
 # Singleton instance
